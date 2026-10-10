@@ -10,19 +10,21 @@ pipeline {
         disableConcurrentBuilds()
     }
 
-    
     environment {
-        PATH            = "/usr/local/bin:/opt/homebrew/bin:/Applications/Docker.app/Contents/Resources/bin:${env.PATH}"
-        IMAGE_NAME      = 'stump-ai'
-        IMAGE_TAG       = ''
-        IMAGE_FULL      = ''
+        PATH = '/usr/local/bin:/opt/homebrew/bin:/Applications/Docker.app/Contents/Resources/bin:/usr/bin:/bin:/usr/sbin:/sbin'
+
+        DOCKER_BIN = '/usr/local/bin/docker'
+
+        IMAGE_NAME = 'stump-ai'
+        IMAGE_TAG = ''
+        IMAGE_FULL = ''
+        GIT_COMMIT = ''
         COMPOSE_PROJECT = 'stump-ai'
     }
 
-
     stages {
 
-        // 1. CHECKOUT
+        // 1. CHECKOUT AND INITIALIZE
         stage('Checkout') {
             steps {
                 checkout scm
@@ -39,56 +41,89 @@ pipeline {
                     env.IMAGE_FULL =
                         "${env.IMAGE_NAME}:${env.IMAGE_TAG}"
 
+                    echo "Git commit: ${env.GIT_COMMIT}"
                     echo "Building image: ${env.IMAGE_FULL}"
                 }
             }
         }
 
-        // 2. STATIC CHECKS
-        stage('Static checks') {
-            agent {
-                docker {
-                    image 'python:3.12-slim-bookworm'
-                    args '-u root:root'
-                    reuseNode true
-                }
-            }
-
+        // 2. VERIFY LOCAL TOOLS
+        stage('Verify tools') {
             steps {
                 sh '''
                     set -eu
 
-                    python -m pip install --upgrade pip
-                    python -m pip install -r requirements.txt
-                    python -m pip check
+                    echo "Checking Python..."
+                    command -v python3
+                    python3 --version
+
+                    echo "Checking Docker..."
+                    test -x "$DOCKER_BIN"
+                    "$DOCKER_BIN" --version
+                    "$DOCKER_BIN" info
+
+                    echo "Checking Docker Compose..."
+                    "$DOCKER_BIN" compose version
+
+                    echo "Checking project files..."
+                    test -f requirements.txt
+                    test -f manage.py
+                    test -f Dockerfile
+
+                    echo "Tool verification passed."
                 '''
-
-                sh '''
-                    python -m compileall -q \
-                        config matches players predictions \
-                        analytics dashboard run.py
-                '''
-
-                sh 'python manage.py check'
-
-                sh 'python manage.py makemigrations --check --dry-run'
             }
         }
 
-        // 3. TEST
-        stage('Test') {
-            agent {
-                docker {
-                    image 'python:3.12-slim-bookworm'
-                    args '-u root:root'
-                    reuseNode true
-                }
-            }
-
+        // 3. INSTALL PYTHON DEPENDENCIES
+        // Runs on the Jenkins Mac agent, not a Docker agent.
+        stage('Install dependencies') {
             steps {
                 sh '''
                     set -eu
-                    python manage.py test \
+
+                    python3 -m venv .venv
+
+                    .venv/bin/python -m pip install \
+                        --disable-pip-version-check \
+                        --upgrade pip
+
+                    .venv/bin/python -m pip install \
+                        --disable-pip-version-check \
+                        -r requirements.txt
+
+                    .venv/bin/python -m pip check
+                '''
+            }
+        }
+
+        // 4. STATIC CHECKS
+        stage('Static checks') {
+            steps {
+                sh '''
+                    set -eu
+
+                    .venv/bin/python -m compileall -q \
+                        config matches players predictions \
+                        analytics dashboard run.py
+
+                    .venv/bin/python manage.py check
+
+                    .venv/bin/python manage.py makemigrations \
+                        --check --dry-run
+
+                    echo "Static checks passed."
+                '''
+            }
+        }
+
+        // 5. DJANGO TESTS
+        stage('Test') {
+            steps {
+                sh '''
+                    set -eu
+
+                    .venv/bin/python manage.py test \
                         --testrunner=config.junit_runner.JunitXmlRunner
                 '''
             }
@@ -103,25 +138,27 @@ pipeline {
             }
         }
 
-        // 4. BUILD DOCKER IMAGE
+        // 6. BUILD THE APPLICATION IMAGE
         stage('Build image') {
             steps {
                 sh '''
                     set -eu
 
-                    docker build \
-                        --tag "${IMAGE_FULL}" \
-                        --tag "${IMAGE_NAME}:latest" \
-                        --label "jenkins.build=${BUILD_NUMBER}" \
-                        --label "jenkins.commit=${GIT_COMMIT}" \
+                    "$DOCKER_BIN" build \
+                        --tag "$IMAGE_FULL" \
+                        --tag "$IMAGE_NAME:latest" \
+                        --label "jenkins.build=$BUILD_NUMBER" \
+                        --label "jenkins.commit=$GIT_COMMIT" \
                         .
 
-                    docker images "${IMAGE_NAME}"
+                    "$DOCKER_BIN" image inspect "$IMAGE_FULL"
+
+                    echo "Docker image built successfully."
                 '''
             }
         }
 
-        // 5. SMOKE TEST
+        // 7. RUN THE APPLICATION AND CHECK ITS HEALTH
         stage('Smoke test image') {
             steps {
                 script {
@@ -129,9 +166,17 @@ pipeline {
                         sh '''
                             set -eu
 
-                            docker network create stump-ci-net
+                            # Remove leftovers from an interrupted build.
+                            "$DOCKER_BIN" rm -f \
+                                stump-ci-web stump-ci-db \
+                                2>/dev/null || true
 
-                            docker run -d \
+                            "$DOCKER_BIN" network rm \
+                                stump-ci-net 2>/dev/null || true
+
+                            "$DOCKER_BIN" network create stump-ci-net
+
+                            "$DOCKER_BIN" run -d \
                                 --name stump-ci-db \
                                 --network stump-ci-net \
                                 -e POSTGRES_DB=ipl \
@@ -139,11 +184,10 @@ pipeline {
                                 -e POSTGRES_PASSWORD=ci \
                                 postgres:16-alpine
 
-                            # Wait for PostgreSQL to become ready.
                             db_ready=0
 
                             for i in $(seq 1 30); do
-                                if docker exec stump-ci-db \
+                                if "$DOCKER_BIN" exec stump-ci-db \
                                     pg_isready -U ipl -d ipl; then
                                     db_ready=1
                                     break
@@ -153,12 +197,12 @@ pipeline {
                             done
 
                             if [ "$db_ready" -ne 1 ]; then
-                                docker logs stump-ci-db || true
-                                echo "PostgreSQL did not become ready"
+                                "$DOCKER_BIN" logs stump-ci-db || true
+                                echo "PostgreSQL failed to start."
                                 exit 1
                             fi
 
-                            docker run -d \
+                            "$DOCKER_BIN" run -d \
                                 --name stump-ci-web \
                                 --network stump-ci-net \
                                 -p 18000:8000 \
@@ -170,11 +214,9 @@ pipeline {
                                 -e DB_PORT=5432 \
                                 -e DJANGO_DEBUG=0 \
                                 -e DJANGO_ALLOW_ALL_HOSTS=1 \
-                                "${IMAGE_FULL}"
+                                "$IMAGE_FULL"
                         '''
 
-                        // Test the HTTP endpoint directly instead of
-                        // relying on a Docker HEALTHCHECK being defined.
                         sh '''
                             set -eu
 
@@ -184,7 +226,7 @@ pipeline {
                                 if curl --fail --silent \
                                     http://127.0.0.1:18000/health/; then
                                     echo ""
-                                    echo "Smoke test passed."
+                                    echo "Application health check passed."
                                     ready=1
                                     break
                                 fi
@@ -193,25 +235,30 @@ pipeline {
                             done
 
                             if [ "$ready" -ne 1 ]; then
-                                docker logs --tail 200 stump-ci-web || true
-                                echo "Application health check failed"
+                                "$DOCKER_BIN" logs \
+                                    --tail 200 stump-ci-web || true
+
+                                echo "Application health check failed."
                                 exit 1
                             fi
                         '''
                     } finally {
                         sh '''
-                            docker rm -f stump-ci-web stump-ci-db \
+                            "$DOCKER_BIN" rm -f \
+                                stump-ci-web stump-ci-db \
                                 2>/dev/null || true
 
-                            docker network rm stump-ci-net \
-                                2>/dev/null || true
+                            "$DOCKER_BIN" network rm \
+                                stump-ci-net 2>/dev/null || true
                         '''
                     }
                 }
             }
         }
 
-        // 6. PUBLISH IMAGE
+        // 8. OPTIONAL REGISTRY PUBLISH
+        // Configure REGISTRY and registry-credentials in Jenkins
+        // to enable this stage.
         stage('Publish image') {
             when {
                 expression {
@@ -231,33 +278,31 @@ pipeline {
                         set -eu
 
                         printf '%s' "$REG_PASS" |
-                            docker login "$REGISTRY" \
+                            "$DOCKER_BIN" login "$REGISTRY" \
                                 --username "$REG_USER" \
                                 --password-stdin
 
-                        docker tag \
-                            "${IMAGE_FULL}" \
-                            "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+                        "$DOCKER_BIN" tag \
+                            "$IMAGE_FULL" \
+                            "$REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
 
-                        docker push \
-                            "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+                        "$DOCKER_BIN" push \
+                            "$REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
 
-                        docker logout "$REGISTRY" || true
+                        "$DOCKER_BIN" logout "$REGISTRY" || true
                     '''
                 }
             }
         }
 
-        // 7. DEPLOY
+        // 9. DEPLOY
         stage('Deploy') {
             steps {
                 script {
                     if (env.DEPLOY_HOST?.trim()) {
-
                         if (!env.REGISTRY?.trim()) {
                             error(
-                                'Remote deployment requires REGISTRY ' +
-                                'to be configured.'
+                                'Remote deployment requires REGISTRY.'
                             )
                         }
 
@@ -271,8 +316,6 @@ pipeline {
                             sh '''
                                 set -eu
 
-                                # The remote host must already have
-                                # Docker, Compose, and registry access.
                                 ssh -i "$SSH_KEY" \
                                     -o StrictHostKeyChecking=accept-new \
                                     "$DEPLOY_USER@$DEPLOY_HOST" \
@@ -294,24 +337,23 @@ pipeline {
                                     '
                             '''
                         }
-
                     } else {
                         echo 'DEPLOY_HOST is not configured.'
-                        echo 'Deploying with local Docker Compose.'
+                        echo 'Deploying locally using Docker Compose.'
 
                         sh '''
                             set -eu
 
-                            docker compose \
-                                -p "${COMPOSE_PROJECT}" \
+                            "$DOCKER_BIN" compose \
+                                -p "$COMPOSE_PROJECT" \
                                 down --remove-orphans || true
 
-                            docker compose \
-                                -p "${COMPOSE_PROJECT}" \
+                            "$DOCKER_BIN" compose \
+                                -p "$COMPOSE_PROJECT" \
                                 up -d --build web
 
-                            docker compose \
-                                -p "${COMPOSE_PROJECT}" ps
+                            "$DOCKER_BIN" compose \
+                                -p "$COMPOSE_PROJECT" ps
                         '''
                     }
                 }
@@ -319,28 +361,27 @@ pipeline {
         }
     }
 
-    // POST-BUILD ACTIONS
+    // 10. CLEANUP
     post {
         success {
             echo "Pipeline completed successfully: ${env.IMAGE_FULL}"
         }
 
         failure {
-            echo 'Pipeline failed. Check the failed stage logs.'
+            echo 'Pipeline failed. Review the first failing stage.'
         }
 
         always {
-            script {
-                sh '''
-                    docker rm -f stump-ci-web stump-ci-db \
-                        2>/dev/null || true
+            sh '''
+                "$DOCKER_BIN" rm -f \
+                    stump-ci-web stump-ci-db \
+                    2>/dev/null || true
 
-                    docker network rm stump-ci-net \
-                        2>/dev/null || true
-                '''
+                "$DOCKER_BIN" network rm \
+                    stump-ci-net 2>/dev/null || true
+            '''
 
-                cleanWs()
-            }
+            cleanWs()
         }
     }
 }
