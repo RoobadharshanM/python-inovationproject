@@ -32,21 +32,22 @@ pipeline {
 
     environment {
         IMAGE_NAME        = 'stump-ai'
-        IMAGE_TAG         = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
-        IMAGE_FULL        = "${IMAGE_NAME}:${IMAGE_TAG}"
+        IMAGE_TAG         = ''
+        IMAGE_FULL        = ''
         COMPOSE_PROJECT   = 'stump-ai'
         // Docker CLI talks to the mounted socket from inside this agent.
         DOCKER_HOST       = 'unix:///var/run/docker.sock'
     }
 
-    stages {
-
-        stage('Checkout') {
-            steps {
-                checkout scm
-                sh 'git rev-parse --short HEAD'
-            }
+    stage('Checkout') {
+    steps {
+        checkout scm
+        script {
+            env.IMAGE_TAG = "${env.BUILD_NUMBER}-${sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()}"
+            env.IMAGE_FULL = "${env.IMAGE_NAME}:${env.IMAGE_TAG}"
         }
+    }
+}
 
         stage('Static checks') {
             agent {
@@ -79,7 +80,7 @@ pipeline {
             }
             steps {
                 sh '''
-                    python manage.py test
+                    python manage.py test --testrunner=config.junit_runner.JunitXmlRunner
                 '''
             }
             post {
