@@ -17,7 +17,6 @@ pipeline {
         IMAGE_TAG       = ''
         IMAGE_FULL      = ''
         COMPOSE_PROJECT = 'stump-ai'
-        DOCKER_HOST     = 'unix:///Users/roobadharshanmuthuselvan/Library/Containers/com.docker.docker/Data/docker-cli.sock'
     }
 
 
