@@ -10,15 +10,16 @@ pipeline {
         disableConcurrentBuilds()
     }
 
+    
     environment {
-        PATH+DOCKER = '/usr/local/bin:/opt/homebrew/bin:/Applications/Docker.app/Contents/Resources/bin'
-        
+        PATH            = "/usr/local/bin:/opt/homebrew/bin:/Applications/Docker.app/Contents/Resources/bin:${env.PATH}"
         IMAGE_NAME      = 'stump-ai'
         IMAGE_TAG       = ''
         IMAGE_FULL      = ''
         COMPOSE_PROJECT = 'stump-ai'
-        DOCKER_HOST     = 'unix:///var/run/docker.sock'
+        DOCKER_HOST     = 'unix:///Users/roobadharshanmuthuselvan/Library/Containers/com.docker.docker/Data/docker-cli.sock'
     }
+
 
     stages {
 
