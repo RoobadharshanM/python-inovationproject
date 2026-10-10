@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}Players — Stump AI{% endblock %}
+{% block meta_description %}Search cricket players and review batting, bowling and career statistics.{% endblock %}
+{% block body_class %}players-page{% endblock %}
+
+{% block content %}
+<section class="page-hero compact-hero">
+  <div class="container-xl">
+    {% include 'partials/breadcrumbs.html' with current_label='Players' %}
+    <div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-4">
+      <div>
+        <span class="section-kicker reveal">Player archive</span>
+        <h1 class="page-title reveal">Find the players shaping the archive.</h1>
+        <p class="page-lead reveal">Search by player or team, narrow by role, then open a profile for season-by-season batting, bowling and match-level output.</p>
+      </div>
+      <div class="d-flex flex-wrap gap-2 reveal">
+        <a class="btn btn-primary" href="/players/rankings/"><i class="bi bi-trophy me-2" aria-hidden="true"></i>View rankings</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-space-sm" aria-labelledby="player-filters-title">
+  <div class="container-xl">
+    <form class="filter-panel reveal" method="get" action="/players/" data-loading-form aria-labelledby="player-filters-title">
+      <h2 class="h5 mb-3" id="player-filters-title"><i class="bi bi-funnel me-2" aria-hidden="true"></i>Find a player</h2>
+      {% include 'partials/login_form_errors.html' %}
+      <div class="filter-grid filter-grid--players">
+        <div>
+          <label class="form-label" for="{{ filter_form.q.id_for_label }}">{{ filter_form.q.label }}</label>
+          <div class="input-icon-wrap"><i class="bi bi-search" aria-hidden="true"></i>{{ filter_form.q }}</div>
+          {% for error in filter_form.q.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label" for="{{ filter_form.team.id_for_label }}">Team affiliation</label>
+          {{ filter_form.team }}
+          {% for error in filter_form.team.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label" for="{{ filter_form.role.id_for_label }}">Role</label>
+          {{ filter_form.role }}
+          {% for error in filter_form.role.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary" type="submit"><i class="bi bi-search me-2" aria-hidden="true"></i>Search</button>
+          {% if has_filters %}<a class="btn btn-ghost" href="/players/">Clear</a>{% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="section-space-sm pt-0" aria-labelledby="player-results-title">
+  <div class="container-xl">
+    <div class="filter-summary">
+      <div class="result-count"><strong>{{ total_count|default:0 }}</strong> player{{ total_count|pluralize }} found{% if has_filters %} for the active filters{% endif %}</div>
+      {% if has_filters %}<a class="btn btn-sm btn-ghost" href="/players/"><i class="bi bi-x-circle me-1" aria-hidden="true"></i>Reset filters</a>{% endif %}
+    </div>
+
+    {% if players %}
+      <h2 class="visually-hidden" id="player-results-title">Players</h2>
+      <div class="entity-grid">
+        {% for player in players %}
+          <a class="entity-card reveal" href="/players/{{ player.pk }}/">
+            <div class="entity-card-top">
+              {% include 'partials/player_avatar.html' with player=player size='md' %}
+              <div class="entity-card-identity">
+                <h2>{{ player.name }}</h2>
+                <div class="entity-subtitle">{{ player.current_team.name|default:'Team not recorded' }}{% if player.nationality %} · {{ player.nationality }}{% endif %}</div>
+              </div>
+            </div>
+            <div class="entity-card-body">
+              <div class="d-flex flex-wrap gap-2"><span class="status-badge status-badge--info">{{ player.get_role_display }}</span>{% if player.current_team %}<span class="status-badge">{{ player.current_team.short_name|default:player.current_team.name }}</span>{% endif %}</div>
+              <div class="entity-stat-row mt-3">
+                <div class="entity-stat"><strong>{{ player.career_stats.runs|default:0 }}</strong><span>Runs</span></div>
+                <div class="entity-stat"><strong>{{ player.career_stats.average|default:0|floatformat:2 }}</strong><span>Average</span></div>
+                <div class="entity-stat"><strong>{{ player.career_stats.wickets|default:0 }}</strong><span>Wickets</span></div>
+              </div>
+            </div>
+            <div class="entity-card-footer">
+              <span><i class="bi bi-person-badge me-1" aria-hidden="true"></i>{{ player.career_stats.appearances|default:0 }} appearances</span>
+              <span><i class="bi bi-arrow-right" aria-hidden="true"></i>Profile</span>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+      {% include 'partials/pagination.html' %}
+    {% else %}
+      <div class="glass-card empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-person-x"></i></span>
+        <h2>{{ empty_state_title|default:'No players found' }}</h2>
+        <p>{{ empty_state_message|default:'Try a different name, team or role.' }}</p>
+        {% if has_filters %}<a class="btn btn-primary" href="/players/"><i class="bi bi-arrow-counterclockwise me-2" aria-hidden="true"></i>Clear filters</a>{% else %}<code class="code-chip">{{ command_hint|default:'python manage.py import_ipl_data' }}</code>{% endif %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

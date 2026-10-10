@@ -1,0 +1,98 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{{ page_title|default:"Prediction history" }} — Cricket Intelligence{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="shell">
+    <div class="page-head">
+      <div class="eyebrow">Your workspace</div>
+      <h1>Prediction history</h1>
+      <p>Search and filter the score and match-outcome estimates saved to your account.</p>
+    </div>
+
+    <div class="panel form-card">
+      <form method="get" class="grid two">
+        <div class="field">
+          <label for="history-q">Search</label>
+          <input id="history-q" type="search" name="q" value="{{ q }}" placeholder="Team, venue or score">
+        </div>
+        <div class="field">
+          <label for="history-type">Prediction type</label>
+          <select id="history-type" name="type">
+            <option value="">All types</option>
+            {% for value, label in prediction_types %}
+              <option value="{{ value }}"{% if prediction_type == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="history-team">Team</label>
+          <select id="history-team" name="team">
+            <option value="">All teams</option>
+            {% for team in teams %}
+              <option value="{{ team.pk }}"{% if team_filter == team.pk|stringformat:"s" %} selected{% endif %}>{{ team.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="history-from">From</label>
+          <input id="history-from" type="date" name="from" value="{{ date_from }}">
+        </div>
+        <div class="field">
+          <label for="history-to">To</label>
+          <input id="history-to" type="date" name="to" value="{{ date_to }}">
+        </div>
+        <div class="field" style="align-self:end">
+          <button class="button" type="submit">Apply filters</button>
+        </div>
+      </form>
+    </div>
+
+    {% if predictions %}
+      <div class="panel mt-3">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Created</th><th>Type</th><th>Match context</th><th>Prediction</th><th>Model</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for prediction in predictions %}
+                <tr>
+                  <td>{{ prediction.created_at }}</td>
+                  <td><span class="badge">{{ prediction.get_prediction_type_display }}</span></td>
+                  <td>{{ prediction.batting_team|default:"—" }} vs {{ prediction.bowling_team|default:"—" }}{% if prediction.venue %} · {{ prediction.venue }}{% endif %}</td>
+                  <td>
+                    {% if prediction.prediction_type == "score" %}
+                      {{ prediction.predicted_score|default:"—" }} runs
+                      {% if prediction.prediction_low is not None and prediction.prediction_high is not None %}<span class="tiny">({{ prediction.prediction_low }}–{{ prediction.prediction_high }})</span>{% endif %}
+                    {% else %}
+                      {{ prediction.outcome_winner|default:"Unknown" }}
+                    {% endif %}
+                  </td>
+                  <td><code>{{ prediction.model_version|default:"—" }}</code></td>
+                  <td>
+                    <a href="{% url 'prediction_result' prediction.pk %}">View</a>
+                    <form method="post" action="{% url 'delete_prediction' prediction.pk %}" style="display:inline;margin-left:.75rem" onsubmit="return confirm('Delete this prediction?');">
+                      {% csrf_token %}
+                      <button class="button danger" type="submit" style="padding:.35rem .55rem;font-size:.8rem">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="mt-3">
+        {% include "partials/pagination.html" %}
+      </div>
+    {% else %}
+      <div class="empty-state glass-card text-center mt-3">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
+        <h2 class="h5">No saved predictions</h2>
+        <p class="text-secondary mb-3">Run a score or outcome prediction and it will appear here.</p>
+        <a class="btn btn-outline-primary" href="{% url 'score_prediction' %}">Make a prediction</a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

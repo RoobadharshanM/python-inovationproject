@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.tools/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+local_settings.py
+
+# Environment and IDE files
+.env
+.idea/
+.vscode/
+.DS_Store
+
+# Generated ML artifacts and large processed datasets
+data/models/*.pkl
+data/models/*.joblib
+data/models/*.json
+data/processed/*.csv
+data/processed/*.json
+
+# Local database backups made before a schema or import change
+data/processed/*.sqlite3
+
+# CI test reports
+test-results.xml
+JUNIT_XML_PATH

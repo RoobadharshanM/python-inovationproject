@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}About — Stump AI{% endblock %}
+{% block meta_description %}Learn how Stump AI turns cricket records into useful visual analysis and predictions.{% endblock %}
+{% block content %}
+<section class="page-hero compact-hero">
+  <div class="container-xl">
+    {% include 'partials/breadcrumbs.html' with current_label='About' %}
+    <div class="row g-4 align-items-end">
+      <div class="col-lg-8">
+        <span class="section-kicker reveal">Our purpose</span>
+        <h1 class="page-title reveal">Cricket intelligence should feel clear, useful and honest.</h1>
+        <p class="page-lead reveal">Stump AI is a data exploration workspace built around the idea that a good visual should help you ask a better question—not replace it.</p>
+      </div>
+      <div class="col-lg-4 reveal"><div class="about-mark" aria-hidden="true"><i class="bi bi-stars"></i></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section-space-sm pt-0">
+  <div class="container-xl">
+    <div class="row g-3">
+      <div class="col-lg-7 reveal"><article class="glass-card content-card h-100"><span class="feature-icon"><i class="bi bi-eye" aria-hidden="true"></i></span><h2>What this platform does</h2><p>It brings match records, player performances and venue indicators into a consistent interface. Filters preserve the query in the URL, so every view can be shared or revisited. Dashboard and analytics visualizations are populated only from the available data.</p><p>Prediction workflows collect the context a forecast needs, show loading and validation states, and make the resulting range or probability distribution easy to inspect.</p></article></div>
+      <div class="col-lg-5 reveal"><article class="glass-card content-card h-100"><span class="feature-icon"><i class="bi bi-compass" aria-hidden="true"></i></span><h2>Our principles</h2><ul class="principle-list list-unstyled"><li><i class="bi bi-check2-circle" aria-hidden="true"></i><span><strong>Data before decoration.</strong> Visual polish never invents a statistic.</span></li><li><i class="bi bi-check2-circle" aria-hidden="true"></i><span><strong>Context over certainty.</strong> Forecasts communicate ranges and uncertainty.</span></li><li><i class="bi bi-check2-circle" aria-hidden="true"></i><span><strong>Access for every screen.</strong> Core tasks work with keyboard, pointer and touch.</span></li><li><i class="bi bi-check2-circle" aria-hidden="true"></i><span><strong>Empty is a valid state.</strong> Missing data is shown honestly.</span></li></ul></article></div>
+    </div>
+  </div>
+</section>
+
+{% if counts %}
+<section class="section-space-sm pt-0" aria-labelledby="about-data-title">
+  <div class="container-xl">
+    <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-4"><div><span class="section-kicker">The current archive</span><h2 class="h3 mt-2 mb-0" id="about-data-title">Data at a glance</h2></div><p class="text-secondary mb-0">These values are read from the configured database.</p></div>
+    <div class="stat-grid">
+      <article class="stat-card"><div class="stat-label"><i class="bi bi-calendar3" aria-hidden="true"></i><span>Matches</span></div><strong class="stat-value">{{ counts.matches|default:0 }}</strong></article>
+      <article class="stat-card"><div class="stat-label"><i class="bi bi-people" aria-hidden="true"></i><span>Players</span></div><strong class="stat-value">{{ counts.players|default:0 }}</strong></article>
+      <article class="stat-card"><div class="stat-label"><i class="bi bi-shield" aria-hidden="true"></i><span>Teams</span></div><strong class="stat-value">{{ counts.teams|default:0 }}</strong></article>
+      <article class="stat-card"><div class="stat-label"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Venues</span></div><strong class="stat-value">{{ counts.venues|default:0 }}</strong></article>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section-space-sm pt-0">
+  <div class="container-xl">
+    <div class="glass-card methodology-panel reveal"><div class="row g-5 align-items-center"><div class="col-lg-5"><span class="section-kicker">Under the hood</span><h2>A practical analytics stack.</h2></div><div class="col-lg-7"><div class="tech-list"><div><i class="bi bi-file-earmark-code" aria-hidden="true"></i><span><strong>Django</strong><small>Server-rendered workflows and APIs</small></span></div><div><i class="bi bi-bar-chart-line" aria-hidden="true"></i><span><strong>Chart.js</strong><small>Responsive, accessible visualizations</small></span></div><div><i class="bi bi-bootstrap" aria-hidden="true"></i><span><strong>Bootstrap 5</strong><small>Responsive layout and form patterns</small></span></div><div><i class="bi bi-braces" aria-hidden="true"></i><span><strong>Modern Python</strong><small>Data processing and predictive models</small></span></div></div></div></div></div>
+  </div>
+</section>
+
+<section class="section-space-sm pt-0">
+  <div class="container-xl"><div class="glass-card cta-panel text-center reveal"><h2>Explore the platform</h2><p>Start with the records, then choose the question.</p><div class="d-flex justify-content-center flex-wrap gap-3"><a class="btn btn-light" href="/dashboard/">Open dashboard</a><a class="btn btn-ghost" href="/analytics/">View analytics</a></div></div></div>
+</section>
+{% endblock %}

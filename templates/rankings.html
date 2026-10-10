@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Player rankings — Stump AI{% endblock %}
+{% block meta_description %}Compare player rankings by runs, wickets, averages, strike rate and economy.{% endblock %}
+{% block body_class %}rankings-page{% endblock %}
+
+{% block content %}
+<section class="page-hero compact-hero">
+  <div class="container-xl">
+    {% include 'partials/breadcrumbs.html' with current_label='Player rankings' %}
+    <div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-4">
+      <div><span class="section-kicker reveal">Comparative view</span><h1 class="page-title reveal">Player rankings</h1><p class="page-lead reveal">Choose a season and metric, then compare the same statistic across the player archive.</p></div>
+      <a class="btn btn-ghost reveal" href="/players/"><i class="bi bi-people me-2" aria-hidden="true"></i>Browse players</a>
+    </div>
+  </div>
+</section>
+
+<section class="section-space-sm">
+  <div class="container-xl">
+    <form class="filter-panel reveal" method="get" action="/players/rankings/" data-loading-form aria-labelledby="ranking-filter-title">
+      <h2 class="h5 mb-3" id="ranking-filter-title"><i class="bi bi-sliders me-2" aria-hidden="true"></i>Choose a ranking</h2>
+      {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}</div>{% endif %}
+      <div class="filter-grid filter-grid--players">
+        <div><label class="form-label" for="{{ filter_form.q.id_for_label }}">Search player</label><div class="input-icon-wrap"><i class="bi bi-search" aria-hidden="true"></i>{{ filter_form.q }}</div>{% for error in filter_form.q.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>
+        <div><label class="form-label" for="{{ filter_form.season.id_for_label }}">Season</label>{{ filter_form.season }}{% for error in filter_form.season.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>
+        <div><label class="form-label" for="{{ filter_form.metric.id_for_label }}">Metric</label>{{ filter_form.metric }}{% for error in filter_form.metric.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>
+        <div><label class="form-label" for="{{ filter_form.team.id_for_label }}">Team</label>{{ filter_form.team }}{% for error in filter_form.team.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>
+        <div><label class="form-label" for="{{ filter_form.role.id_for_label }}">Role</label>{{ filter_form.role }}{% for error in filter_form.role.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>
+        <div class="filter-actions"><button class="btn btn-primary" type="submit">Apply ranking</button>{% if has_filters %}<a class="btn btn-ghost" href="/players/rankings/">Clear</a>{% endif %}</div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="section-space-sm pt-0" aria-labelledby="ranking-results-title">
+  <div class="container-xl">
+    <div class="filter-summary"><div class="result-count"><strong>{{ total_count|default:0 }}</strong> ranked player{{ total_count|pluralize }}{% if selected_season %} · Season {{ selected_season }}{% endif %}</div><span class="status-badge status-badge--info">{{ metric_label|default:metric }}</span></div>
+    {% if rankings %}
+      <article class="table-panel">
+        <header class="table-panel-header"><div><h2 id="ranking-results-title">{{ metric_label|default:'Player metric' }} leaderboard</h2><p class="text-secondary mb-0">Lower values are marked as better for economy and bowling average.</p></div></header>
+        <div class="table-wrap"><table class="table"><caption class="visually-hidden">Player rankings</caption><thead><tr><th scope="col">Rank</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col" class="numeric">{{ metric_label|default:'Metric' }}</th><th scope="col" class="numeric">Runs</th><th scope="col" class="numeric">Wickets</th></tr></thead><tbody>
+          {% for row in rankings %}<tr><td><span class="status-badge{% if forloop.counter <= 3 %} status-badge--success{% endif %}">{{ row.rank }}</span></td><td>{% if row.player %}<a class="table-link" href="/players/{{ row.player.pk }}/">{{ row.player.name }}</a>{% else %}Player {{ row.player_id }}{% endif %}</td><td>{{ row.player.current_team.name|default:'Not recorded' }}</td><td class="numeric"><strong>{{ row.metric_value|floatformat:2 }}</strong></td><td class="numeric">{{ row.runs }}</td><td class="numeric">{{ row.wickets }}</td></tr>{% endfor %}
+        </tbody></table></div>
+      </article>
+      {% include 'partials/pagination.html' %}
+    {% else %}
+      <div class="glass-card empty-state"><span class="empty-icon" aria-hidden="true"><i class="bi bi-trophy"></i></span><h2>{{ empty_state_title|default:'No rankings available' }}</h2><p>{{ empty_state_message|default:'Player rankings appear after delivery data is imported.' }}</p>{% if has_filters %}<a class="btn btn-primary" href="/players/rankings/"><i class="bi bi-arrow-counterclockwise me-2" aria-hidden="true"></i>Clear filters</a>{% endif %}</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

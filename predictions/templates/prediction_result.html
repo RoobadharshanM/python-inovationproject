@@ -1,0 +1,66 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{{ page_title|default:"Prediction result" }} — Cricket Intelligence{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="shell">
+    <div class="page-head">
+      <div class="eyebrow">Saved prediction</div>
+      <h1>{% if prediction.prediction_type == "outcome" %}Match outcome result{% else %}Score prediction result{% endif %}</h1>
+      <p>Review the estimate and its input context. This record is saved in your prediction history.</p>
+    </div>
+
+    {% if prediction %}
+      <div class="grid two">
+        <div class="panel">
+          <h2>Prediction</h2>
+          {% if prediction.prediction_type == "score" %}
+            <div class="stat"><strong>{{ prediction.predicted_score|default:"—" }}</strong><span>predicted runs</span></div>
+            {% if prediction.prediction_low is not None and prediction.prediction_high is not None %}
+              <p class="mt-3">Empirical range: <strong>{{ prediction.prediction_low }}–{{ prediction.prediction_high }}</strong> runs</p>
+            {% endif %}
+          {% else %}
+            <div class="stat"><strong>{{ prediction.outcome_winner|default:"Unknown" }}</strong><span>predicted winner</span></div>
+            {% if prediction.outcome_probabilities %}
+              <div class="table-wrap mt-3">
+                <table>
+                  <thead><tr><th>Team</th><th>Probability</th></tr></thead>
+                  <tbody>
+                    {% for team, probability in prediction.outcome_probabilities.items %}
+                      <tr><td>{{ team }}</td><td>{{ probability|floatformat:4 }}</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% endif %}
+          {% endif %}
+          {% if prediction.model_version %}<p class="tiny mt-3">Model: <code>{{ prediction.model_version }}</code></p>{% endif %}
+          <a class="button secondary mt-3" href="{% url 'prediction_history' %}">View my history</a>
+        </div>
+
+        <div class="panel">
+          <h2>Match context</h2>
+          <div class="table-wrap">
+            <table>
+              <tbody>
+                <tr><th>Teams</th><td>{{ prediction.batting_team|default:"—" }} vs {{ prediction.bowling_team|default:"—" }}</td></tr>
+                <tr><th>Venue</th><td>{{ prediction.venue|default:"—" }}</td></tr>
+                <tr><th>Season</th><td>{{ prediction.season|default:"—" }}</td></tr>
+                <tr><th>Toss winner</th><td>{{ prediction.toss_winner|default:"Not supplied" }}</td></tr>
+                <tr><th>Toss decision</th><td>{{ prediction.toss_decision|default:"Not supplied"|title }}</td></tr>
+                <tr><th>Created</th><td>{{ prediction.created_at }}</td></tr>
+                {% if prediction.prediction_type == "score" %}
+                  <tr><th>Current score</th><td>{{ prediction.current_score|default:"—" }}</td></tr>
+                  <tr><th>Overs completed</th><td>{{ prediction.overs_completed|default:"—" }}</td></tr>
+                  <tr><th>Wickets</th><td>{{ prediction.wickets|default:"—" }}</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="panel muted-empty"><strong>Prediction not found.</strong><p>Return to the prediction form and try again.</p></div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

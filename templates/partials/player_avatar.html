@@ -1,0 +1,21 @@
+{% comment %}
+Renders a player portrait, falling back to a generated initials avatar.
+
+Usage:
+  {% include "partials/player_avatar.html" with player=player size="md" %}
+
+Order of preference:
+  1. Player.image  - a file uploaded in the Django admin
+  2. Player.photo_url - a remote portrait URL
+  3. A generated monogram built from the player's initials, tinted with the
+     current team's primary colour so each card stays recognisable.
+{% endcomment %}
+<span class="player-avatar player-avatar--{{ size|default:'md' }}{% if not player.has_portrait %} is-generated{% endif %}"
+      style="--avatar-color: {{ player.avatar_color }}; --avatar-text: {{ player.avatar_text_color }};"
+      aria-hidden="true">
+  {% if player.has_portrait %}
+    <img src="{{ player.portrait }}" alt="" width="96" height="96" loading="lazy" decoding="async">
+  {% else %}
+    <span class="player-avatar-initials">{{ player.initials }}</span>
+  {% endif %}
+</span>

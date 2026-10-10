@@ -1,0 +1,34 @@
+{% comment %}
+Renders a team crest.
+
+Usage:
+  {% include "partials/team_crest.html" with team=match.team1 size="lg" %}
+
+An uploaded logo (Team.logo, managed in the Django admin) always wins.  When no
+artwork is available an inline SVG is generated from the franchise's real brand
+colours, which stays sharp at any size and never causes layout shift.
+{% endcomment %}
+{% load static %}
+{% with colours=team.crest_colors %}
+<span class="team-crest team-crest--{{ size|default:'md' }}{% if not team.logo %} is-generated{% endif %}"
+      style="--crest-primary: {{ colours.primary }}; --crest-secondary: {{ colours.secondary }}; --crest-accent: {{ colours.accent }}; --crest-text: {{ colours.text }};"
+      {% if decorative %}aria-hidden="true"{% else %}role="img" aria-label="{{ team.name }} crest"{% endif %}>
+  {% if team.logo %}
+    <img src="{{ team.logo.url }}" alt="" width="96" height="96" loading="lazy" decoding="async">
+  {% else %}
+    <svg class="team-crest-art" viewBox="0 0 100 100" focusable="false" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="crestFill{{ team.pk }}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--crest-primary)"/>
+          <stop offset="100%" stop-color="var(--crest-secondary)"/>
+        </linearGradient>
+      </defs>
+      <path d="M50 3 92 17v34c0 24-17 39-42 46C25 90 8 75 8 51V17L50 3Z" fill="url(#crestFill{{ team.pk }})"/>
+      <path d="M50 3 92 17v34c0 24-17 39-42 46C25 90 8 75 8 51V17L50 3Z" fill="none" stroke="var(--crest-accent)" stroke-width="4"/>
+      <path d="M22 30h56M22 70h56" stroke="var(--crest-text)" stroke-width="2" opacity="0.28" stroke-linecap="round"/>
+      <text x="50" y="51" text-anchor="middle" dominant-baseline="central"
+            fill="var(--crest-text)" class="team-crest-mono{% if team.monogram|length > 3 %} team-crest-mono--compact{% endif %}">{{ team.monogram }}</text>
+    </svg>
+  {% endif %}
+</span>
+{% endwith %}

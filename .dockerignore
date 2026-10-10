@@ -1,0 +1,47 @@
+# Local development environment - never copy a host virtualenv into an image
+venv/
+.venv/
+.tools/
+
+# Bytecode and caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Version control and editor noise
+.git/
+.gitignore
+.github/
+.DS_Store
+.idea/
+.vscode/
+
+# Secrets
+.env
+
+# Local database and uploaded media.
+# The container gets a fresh database on first boot and imports the CSV source
+# itself, so shipping the developer's SQLite file would be both large and stale.
+db.sqlite3
+db.sqlite3-journal
+media/
+
+# Build artefacts produced inside the image at runtime
+staticfiles/
+*.log
+test-results.xml
+
+# Trained model binaries (16 MB). They are rebuilt on demand inside the
+# container by `run.py --train`, which keeps image layers small and guarantees
+# the artifacts match the installed scikit-learn version.
+data/models/
+data/processed/
+
+# Docs and CI definitions are not needed to run the service
+README.md
+Jenkinsfile
+docker-compose*.yml
+docs/

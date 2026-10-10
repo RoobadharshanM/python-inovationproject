@@ -1,0 +1,24 @@
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav class="pagination-wrap" aria-label="Pagination">
+  <p class="pagination-summary text-secondary mb-0">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+  <ul class="pagination pagination-sm mb-0">
+    <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
+      {% if page_obj.has_previous %}<a class="page-link" href="?page={{ page_obj.previous_page_number }}" data-page-link="{{ page_obj.previous_page_number }}" aria-label="Previous page"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>{% else %}<span class="page-link" aria-hidden="true"><i class="bi bi-chevron-left"></i></span>{% endif %}
+    </li>
+    {% for number in page_obj.paginator.page_range %}
+      {% if number == page_obj.number %}
+        <li class="page-item active" aria-current="page"><span class="page-link">{{ number }}</span></li>
+      {% elif number >= page_obj.number|add:"-2" and number <= page_obj.number|add:"2" %}
+        <li class="page-item"><a class="page-link" href="?page={{ number }}" data-page-link="{{ number }}">{{ number }}</a></li>
+      {% elif number == 1 or number == page_obj.paginator.num_pages %}
+        <li class="page-item"><a class="page-link" href="?page={{ number }}" data-page-link="{{ number }}">{{ number }}</a></li>
+      {% elif number == page_obj.number|add:"-3" or number == page_obj.number|add:"3" %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+    {% endfor %}
+    <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
+      {% if page_obj.has_next %}<a class="page-link" href="?page={{ page_obj.next_page_number }}" data-page-link="{{ page_obj.next_page_number }}" aria-label="Next page"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% else %}<span class="page-link" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>{% endif %}
+    </li>
+  </ul>
+</nav>
+{% endif %}

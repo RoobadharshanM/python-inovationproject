@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}{{ status_code|default:'Error' }} — Stump AI{% endblock %}
+{% block content %}
+<section class="error-page section-space">
+  <div class="container text-center">
+    <div class="error-code" aria-hidden="true">{{ status_code|default:'Error' }}</div>
+    <span class="section-kicker">Something went off script</span>
+    <h1 class="page-title mx-auto">{{ headline|default:'We could not complete that request.' }}</h1>
+    <p class="page-lead mx-auto">{{ message|default:'The page could not be loaded. Return home or try the request again.' }}</p>
+    <div class="d-flex justify-content-center flex-wrap gap-3 mt-4"><a class="btn btn-primary" href="/"><i class="bi bi-house me-2" aria-hidden="true"></i>Return home</a><button class="btn btn-ghost" type="button" data-reload><i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i>Try again</button></div>
+  </div>
+</section>
+{% endblock %}

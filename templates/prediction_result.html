@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Prediction result — Stump AI{% endblock %}
+{% block meta_description %}Review a saved Stump AI score or match outcome prediction.{% endblock %}
+{% block body_class %}prediction-result-page{% endblock %}
+
+{% block content %}
+<div class="container-xl prediction-page" data-prediction-page data-prediction-result data-prediction-type="{{ prediction.prediction_type|default:'score' }}" data-prediction-kind="{{ prediction.prediction_type|default:'score' }}" data-model-status-url="{% url 'prediction_model_status_api' %}">
+  {% include 'partials/breadcrumbs.html' with current_label='Prediction result' %}
+  <section class="page-hero compact-hero prediction-hero">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-4">
+      <div><span class="section-kicker reveal">Saved prediction</span><h1 class="page-title reveal">{% if prediction.prediction_type == 'outcome' %}Match outcome forecast{% else %}Score forecast{% endif %}</h1><p class="page-lead reveal">Review the model output, input context and any uncertainty range or probabilities that were actually returned.</p></div>
+      <div class="page-header-actions reveal"><a class="btn btn-ghost" href="/predictions/history/"><i class="bi bi-clock-history me-2" aria-hidden="true"></i>Prediction history</a><a class="btn btn-primary" href="{% if prediction.prediction_type == 'outcome' %}/predictions/outcome/{% else %}/predictions/score/{% endif %}"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>New prediction</a></div>
+    </div>
+  </section>
+
+  {% if prediction.prediction_type == 'score' %}
+    <article class="glass-card forecast-result reveal">
+      <span class="forecast-label">Predicted innings score</span>
+      {% if result.predicted_score or prediction.predicted_score or result.prediction %}<strong class="forecast-number">{% firstof result.predicted_score prediction.predicted_score result.prediction %}</strong>{% else %}<strong class="forecast-number">—</strong>{% endif %}
+      {% if result.prediction_low or prediction.prediction_low %}<span class="forecast-range">Published range: {% firstof result.prediction_low prediction.prediction_low %}–{% firstof result.prediction_high prediction.prediction_high %} runs{% if result.range_method %} · {{ result.range_method }}{% endif %}</span>{% else %}<span class="forecast-range">No empirical range was published for this model.</span>{% endif %}
+      <p class="text-secondary mt-3 mb-0">{{ prediction.batting_team.name|default:'Unknown team' }} against {{ prediction.bowling_team.name|default:'unknown opponent' }}{% if prediction.venue %} at {{ prediction.venue.name }}{% endif %}</p>
+    </article>
+  {% else %}
+    <article class="glass-card forecast-result reveal">
+      <span class="forecast-label">Predicted match winner</span>
+      <strong class="forecast-number display-6 text-capitalize">{% firstof result.predicted_winner result.prediction prediction.outcome_winner.name 'Unavailable' %}</strong>
+      <span class="forecast-range">{% if result.probabilities %}Classifier probabilities are shown below and in the chart.{% else %}The model did not publish probability estimates.{% endif %}</span>
+      <p class="text-secondary mt-3 mb-0">{{ prediction.batting_team.name|default:'Unknown team' }} against {{ prediction.bowling_team.name|default:'unknown opponent' }}{% if prediction.venue %} at {{ prediction.venue.name }}{% endif %}</p>
+    </article>
+  {% endif %}
+
+  <div class="row g-3 mt-1">
+    <div class="col-12 col-xl-8">
+      <article class="chart-card glass-card h-100">
+        <header class="chart-card-header"><div><p class="chart-kicker mb-1">Model output</p><h2 class="chart-title">{% if prediction.prediction_type == 'score' %}Estimate and published range{% else %}Available class probabilities{% endif %}</h2><p class="chart-subtitle mb-0">Values saved with this prediction</p></div><span class="chart-status"><span class="status-dot"></span>Saved result</span></header>
+        <div class="chart-container" data-chart-container><canvas id="predictionResultChart" role="img" aria-label="{% if prediction.prediction_type == 'score' %}Predicted score and range{% else %}Predicted outcome class probabilities{% endif %}"></canvas><div class="chart-empty" data-chart-empty hidden><i class="bi bi-bar-chart" aria-hidden="true"></i><span>No plottable result is available.</span></div></div>
+      </article>
+    </div>
+    <div class="col-12 col-xl-4">
+      <aside class="glass-card prediction-aside h-100"><span class="section-kicker">Run details</span><h2 class="h4 mt-2 mb-3">Prediction metadata</h2><dl class="row small mb-0"><dt class="col-6 text-secondary fw-normal">Created</dt><dd class="col-6 text-end">{{ prediction.created_at|date:'d M Y, H:i'|default:'Not available' }}</dd><dt class="col-6 text-secondary fw-normal">Season</dt><dd class="col-6 text-end">{{ prediction.season|default:'Not supplied' }}</dd><dt class="col-6 text-secondary fw-normal">Model version</dt><dd class="col-6 text-end">{{ prediction.model_version|default:'Not published' }}</dd><dt class="col-6 text-secondary fw-normal">Toss winner</dt><dd class="col-6 text-end">{{ prediction.toss_winner.name|default:'Not supplied' }}</dd><dt class="col-6 text-secondary fw-normal">Toss decision</dt><dd class="col-6 text-end">{% if prediction.toss_decision == 'bat' %}Bat first{% elif prediction.toss_decision == 'field' %}Field first{% else %}Not supplied{% endif %}</dd></dl><div class="disclaimer mt-4"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><span>Model output is uncertain and should not be treated as a guaranteed result.</span></div></aside>
+    </div>
+  </div>
+
+  {% if prediction.prediction_type == 'outcome' %}
+    {% with probabilities=result.probabilities %}
+      {% if probabilities %}
+        <article class="table-panel mt-3"><header class="table-panel-header"><div><h2>Classifier probabilities</h2><p class="text-secondary mb-0">Values returned by the published model.</p></div></header><div class="table-wrap"><table class="table"><caption class="visually-hidden">Outcome class probabilities</caption><thead><tr><th scope="col">Class</th><th scope="col" class="numeric">Probability value</th></tr></thead><tbody>{% for team, probability in probabilities.items %}<tr><td>{{ team }}</td><td class="numeric">{{ probability|floatformat:4 }}</td></tr>{% endfor %}</tbody></table></div></article>
+      {% endif %}
+    {% endwith %}
+  {% endif %}
+
+  <article class="table-panel mt-3"><header class="table-panel-header"><div><h2>Saved input context</h2><p class="text-secondary mb-0">The values used to generate this result.</p></div></header><div class="table-wrap"><table class="table"><caption class="visually-hidden">Prediction input context</caption><thead><tr><th scope="col">Field</th><th scope="col">Value</th></tr></thead><tbody><tr><td>Batting team</td><td>{{ prediction.batting_team.name|default:'Not supplied' }}</td></tr><tr><td>Opponent</td><td>{{ prediction.bowling_team.name|default:'Not supplied' }}</td></tr><tr><td>Venue</td><td>{{ prediction.venue.name|default:'Not supplied' }}</td></tr><tr><td>Season</td><td>{{ prediction.season|default:'Not supplied' }}</td></tr>{% if prediction.prediction_type == 'score' %}<tr><td>Current score</td><td>{{ prediction.current_score|default_if_none:'Not supplied' }}</td></tr><tr><td>Overs completed</td><td>{{ prediction.overs_completed|default_if_none:'Not supplied' }}</td></tr><tr><td>Wickets</td><td>{{ prediction.wickets|default_if_none:'Not supplied' }}</td></tr><tr><td>Current run rate</td><td>{{ prediction.current_run_rate|default_if_none:'Not supplied' }}</td></tr><tr><td>Last five overs</td><td>{{ prediction.last_5_overs_runs|default_if_none:'Not supplied' }} runs</td></tr><tr><td>Target score</td><td>{{ prediction.target_score|default_if_none:'Not supplied' }}</td></tr>{% endif %}</tbody></table></div></article>
+</div>
+{{ result|json_script:'predictionResultData' }}
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/prediction.js' %}?v=20260930-1" defer></script>{% endblock %}

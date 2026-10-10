@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Advanced Analytics — Stump AI{% endblock %}
+{% block meta_description %}Filter and compare real IPL team, player, season, and venue performance data.{% endblock %}
+{% block body_class %}analytics-page{% endblock %}
+{% block content %}
+<section class="page-hero compact-hero">
+  <div class="container-xl">
+    <div class="row g-4 align-items-end">
+      <div class="col-lg-8">
+        <span class="section-kicker reveal">Advanced workspace</span>
+        <h1 class="page-title reveal">{{ title }}</h1>
+        <p class="page-lead reveal mb-0">{{ description }}</p>
+      </div>
+      <div class="col-lg-4 text-lg-end"><a class="btn btn-ghost" href="{{ api_url }}"><i class="bi bi-braces me-2" aria-hidden="true"></i>Open JSON API</a></div>
+    </div>
+  </div>
+</section>
+<section class="section-space pt-0">
+  <div class="container-xl">
+    <div class="analytics-layout">
+      <aside class="analytics-sidebar">
+        <form method="get" class="glass-card content-card">
+          <h2>Filters</h2>
+          {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              <select class="form-select{% if field.errors %} is-invalid{% endif %}" name="{{ field.html_name }}" id="{{ field.id_for_label }}">{% for value,label in field.field.choices %}<option value="{{ value }}"{% if field.value|stringformat:'s' == value|stringformat:'s' %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+              {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+          {% endfor %}
+          <div class="d-grid gap-2"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-ghost" href="{% url 'analytics-dashboard' %}">Reset</a></div>
+        </form>
+        <nav class="analysis-nav" aria-label="Analysis types">
+          <a href="{% url 'analytics-team-comparison' %}"><i class="bi bi-people" aria-hidden="true"></i>Compare teams</a>
+          <a href="{% url 'analytics-player-comparison' %}"><i class="bi bi-person" aria-hidden="true"></i>Compare players</a>
+          <a href="{% url 'analytics-venue-analysis' %}"><i class="bi bi-geo-alt" aria-hidden="true"></i>Analyze a venue</a>
+          <a href="{% url 'analytics-player-trend' %}"><i class="bi bi-graph-up" aria-hidden="true"></i>Track player form</a>
+          <a href="{% url 'analytics-head-to-head' %}"><i class="bi bi-shield" aria-hidden="true"></i>Head to head</a>
+        </nav>
+      </aside>
+      <div>
+        {% if overview %}
+          <div class="analytics-summary-grid">
+            <article class="glass-card kpi-card"><div><p>Matches</p><strong>{{ overview.summary.matches }}</strong><span>Filtered records</span></div></article>
+            <article class="glass-card kpi-card"><div><p>Total runs</p><strong>{{ overview.summary.total_runs }}</strong><span>All innings</span></div></article>
+            <article class="glass-card kpi-card"><div><p>Average score</p><strong>{{ overview.summary.average_team_score }}</strong><span>Per innings</span></div></article>
+            <article class="glass-card kpi-card"><div><p>Wickets</p><strong>{{ overview.summary.wickets }}</strong><span>Recorded dismissals</span></div></article>
+          </div>
+          <article class="glass-card content-card">
+            <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-4"><div><span class="section-kicker">Standings</span><h2 class="h4 mt-2 mb-1">Team performance</h2><p class="text-secondary mb-0">Win rate and run aggregates for the selected matches.</p></div></div>
+            <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Team</th><th>Played</th><th>Won</th><th>Lost</th><th>Win %</th><th>Runs</th><th>Avg score</th><th>Wickets</th></tr></thead><tbody>{% for team in overview.standings %}<tr><th>{{ team.name }}</th><td>{{ team.played }}</td><td>{{ team.wins }}</td><td>{{ team.losses }}</td><td>{{ team.win_percentage }}%</td><td>{{ team.runs }}</td><td>{{ team.average_score }}</td><td>{{ team.wickets }}</td></tr>{% empty %}<tr><td colspan="8"><div class="empty-state"><h3>No matching matches</h3><p>Change or clear the filters to explore available records.</p></div></td></tr>{% endfor %}</tbody></table></div>
+          </article>
+          <div class="row g-4 mt-0">
+            <div class="col-xl-6"><article class="glass-card content-card h-100"><span class="section-kicker">Batting</span><h2 class="h4 mt-2">Leading batters</h2><div class="table-responsive"><table class="table"><thead><tr><th>Player</th><th>Runs</th><th>Avg</th><th>SR</th><th>4s / 6s</th></tr></thead><tbody>{% for player in overview.top_batters %}<tr><td>{{ player.player }}</td><td>{{ player.runs }}</td><td>{{ player.average }}</td><td>{{ player.strike_rate }}</td><td>{{ player.fours }} / {{ player.sixes }}</td></tr>{% empty %}<tr><td colspan="5">No player performances yet.</td></tr>{% endfor %}</tbody></table></div></article></div>
+            <div class="col-xl-6"><article class="glass-card content-card h-100"><span class="section-kicker">Bowling</span><h2 class="h4 mt-2">Leading bowlers</h2><div class="table-responsive"><table class="table"><thead><tr><th>Player</th><th>Wickets</th><th>Average</th><th>Economy</th></tr></thead><tbody>{% for player in overview.top_bowlers %}<tr><td>{{ player.player }}</td><td>{{ player.wickets }}</td><td>{{ player.average }}</td><td>{{ player.economy }}</td></tr>{% empty %}<tr><td colspan="4">No bowling performances yet.</td></tr>{% endfor %}</tbody></table></div></article></div>
+          </div>
+          <article class="glass-card content-card mt-4"><span class="section-kicker">Conditions</span><h2 class="h4 mt-2 mb-4">Venue performance</h2><div class="table-responsive"><table class="table"><thead><tr><th>Venue</th><th>City</th><th>Matches</th><th>Avg first innings</th><th>Bat first wins</th><th>Chasing wins</th></tr></thead><tbody>{% for venue in overview.venues %}<tr><td>{{ venue.venue }}</td><td>{{ venue.city|default:"—" }}</td><td>{{ venue.matches }}</td><td>{{ venue.average_first_innings_score }}</td><td>{{ venue.batting_first_wins }}</td><td>{{ venue.chasing_wins }}</td></tr>{% empty %}<tr><td colspan="6">No venue records match these filters.</td></tr>{% endfor %}</tbody></table></div></article>
+        {% else %}
+          <div class="glass-card empty-state analysis-state"><span class="empty-icon"><i class="bi bi-database-exclamation" aria-hidden="true"></i></span><h2>Analytics are temporarily unavailable</h2><p>The database schema or records may still be loading. No sample values are shown.</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

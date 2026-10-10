@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}{{ player.name }} — Player profile — Stump AI{% endblock %}
+{% block meta_description %}Career, seasonal and match-level statistics for {{ player.name }}.{% endblock %}
+{% block body_class %}player-detail-page{% endblock %}
+
+{% block content %}
+<section class="page-hero compact-hero">
+  <div class="container-xl">
+    {% include 'partials/breadcrumbs.html' with current_label=player.name %}
+    <article class="glass-card profile-head reveal">
+      <div class="profile-head-avatar" style="--avatar-color: {{ player.avatar_color }}; --avatar-text: {{ player.avatar_text_color }};" aria-hidden="true">
+        {% if player.has_portrait %}<img src="{{ player.portrait }}" alt="" width="224" height="224" decoding="async">{% else %}<span class="player-avatar-initials">{{ player.initials }}</span>{% endif %}
+      </div>
+      <div class="min-w-0 flex-grow-1">
+        <span class="section-kicker">{{ player.role_label|default:player.get_role_display }}</span>
+        <h1>{{ player.name }}</h1>
+        <div class="profile-meta">
+          {% if player.current_team %}<span><i class="bi bi-shield me-1" aria-hidden="true"></i>{{ player.current_team.name }}</span>{% endif %}
+          {% if player.nationality %}<span><i class="bi bi-globe2 me-1" aria-hidden="true"></i>{{ player.nationality }}</span>{% endif %}
+          <span><i class="bi bi-calendar3 me-1" aria-hidden="true"></i>{{ total_matches|default:0 }} recorded appearances</span>
+          <span><i class="bi bi-stars me-1" aria-hidden="true"></i>{{ player_of_match_awards|default:0 }} player-of-the-match awards</span>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <a class="btn btn-ghost" href="/players/">All players</a>
+          <a class="btn btn-ghost" href="/players/rankings/?q={{ player.name|urlencode }}">Player rankings</a>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="section-space-sm" aria-labelledby="career-title">
+  <div class="container-xl">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+      <div><span class="section-kicker">Career totals</span><h2 class="h3 mt-2 mb-0" id="career-title">Batting and bowling at a glance</h2></div>
+      <p class="text-secondary mb-0">Calculated from the available seasonal rollups.</p>
+    </div>
+    <div class="career-stat-grid">
+      <article class="career-stat"><strong>{{ career_stats.appearances|default:0 }}</strong><span>Appearances</span></article>
+      <article class="career-stat"><strong>{{ career_stats.runs|default:0 }}</strong><span>Runs</span></article>
+      <article class="career-stat"><strong>{{ career_stats.average|default:0|floatformat:2 }}</strong><span>Batting average</span></article>
+      <article class="career-stat"><strong>{{ career_stats.strike_rate|default:0|floatformat:2 }}</strong><span>Strike rate</span></article>
+      <article class="career-stat"><strong>{{ career_stats.wickets|default:0 }}</strong><span>Wickets</span></article>
+      <article class="career-stat"><strong>{{ career_stats.economy|default:0|floatformat:2 }}</strong><span>Economy</span></article>
+    </div>
+  </div>
+</section>
+
+<section class="section-space-sm pt-0" aria-labelledby="player-trend-title">
+  <div class="container-xl">
+    <div class="row g-3">
+      <div class="col-12 col-xl-8" data-player-season-chart>
+        <article class="table-panel h-100">
+          <header class="table-panel-header"><div><h2 id="player-trend-title">Season-by-season trend</h2><p class="text-secondary mb-0">Runs, wickets and rate indicators from the selected player's records.</p></div></header>
+          <div class="chart-container" data-chart-container>
+            <canvas id="playerSeasonChart" role="img" aria-label="Season-by-season runs, wickets, batting average and economy for {{ player.name }}"></canvas>
+            <div class="chart-empty" data-chart-empty hidden><i class="bi bi-graph-up" aria-hidden="true"></i><span>No seasonal statistics are available.</span></div>
+          </div>
+        </article>
+        {% if chart_data %}{{ chart_data|json_script:'playerSeasonChartData' }}{% endif %}
+      </div>
+      <div class="col-12 col-xl-4">
+        <article class="profile-summary h-100">
+          <span class="section-kicker">Profile coverage</span>
+          <div class="entity-stat-row mt-3">
+            <div class="entity-stat"><strong>{{ player.total_seasons|default:0 }}</strong><span>Seasons</span></div>
+            <div class="entity-stat"><strong>{{ performance_count|default:0 }}</strong><span>Match records</span></div>
+            <div class="entity-stat"><strong>{{ player_of_match_awards|default:0 }}</strong><span>Awards</span></div>
+          </div>
+          <h3 class="h6 mt-4">Affiliations</h3>
+          {% if affiliations %}
+            <ul class="list-unstyled d-grid gap-2 mb-0">
+              {% for affiliation in affiliations %}<li class="d-flex justify-content-between gap-3"><span>{{ affiliation.team.name }}</span><span class="text-secondary text-nowrap">{% if affiliation.first_season %}{{ affiliation.first_season }}{% endif %}{% if affiliation.last_season %}–{{ affiliation.last_season }}{% endif %}</span></li>{% endfor %}
+            </ul>
+          {% else %}<p class="text-secondary mb-0">No team affiliation has been recorded.</p>{% endif %}
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-space-sm pt-0" aria-labelledby="seasonal-stats-title">
+  <div class="container-xl">
+    <article class="table-panel">
+      <header class="table-panel-header"><div><h2 id="seasonal-stats-title">Seasonal records</h2><p class="text-secondary mb-0">Team-level rollups preserved for each season.</p></div><span class="status-badge">{{ seasonal_performances|length }} records</span></header>
+      <div class="table-wrap">
+        <table class="table">
+          <caption class="visually-hidden">Seasonal statistics for {{ player.name }}</caption>
+          <thead><tr><th scope="col">Season</th><th scope="col">Team</th><th scope="col" class="numeric">Apps</th><th scope="col" class="numeric">Runs</th><th scope="col" class="numeric">Avg</th><th scope="col" class="numeric">SR</th><th scope="col" class="numeric">4s / 6s</th><th scope="col" class="numeric">Wickets</th><th scope="col" class="numeric">Econ</th></tr></thead>
+          <tbody>
+            {% for row in seasonal_performances %}
+              <tr><td>{{ row.season }}</td><td>{{ row.team.name }}</td><td class="numeric">{{ row.appearances }}</td><td class="numeric">{{ row.runs }}</td><td class="numeric">{{ row.average|floatformat:2 }}</td><td class="numeric">{{ row.strike_rate|floatformat:2 }}</td><td class="numeric">{{ row.fours }} / {{ row.sixes }}</td><td class="numeric">{{ row.wickets }}</td><td class="numeric">{{ row.economy|floatformat:2 }}</td></tr>
+            {% empty %}
+              <tr><td colspan="9" class="table-empty">{{ empty_state_message|default:'No delivery-derived statistics are available for this player.' }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="section-space-sm pt-0" aria-labelledby="recent-performance-title">
+  <div class="container-xl">
+    <article class="table-panel">
+      <header class="table-panel-header"><div><h2 id="recent-performance-title">Recent match performances</h2><p class="text-secondary mb-0">The latest match-level records available for this player.</p></div><span class="status-badge">{{ recent_performances|length }} shown</span></header>
+      <div class="table-wrap">
+        <table class="table">
+          <caption class="visually-hidden">Recent match performances for {{ player.name }}</caption>
+          <thead><tr><th scope="col">Date</th><th scope="col">Match</th><th scope="col">Runs</th><th scope="col" class="numeric">Balls</th><th scope="col" class="numeric">SR</th><th scope="col" class="numeric">Wickets</th><th scope="col" class="numeric">Runs conceded</th></tr></thead>
+          <tbody>
+            {% for performance in recent_performances %}
+              <tr><td>{{ performance.match.date|date:'d M Y' }}</td><td><a class="table-link" href="/matches/{{ performance.match.pk }}/">{{ performance.match.team1.name }} vs {{ performance.match.team2.name }}</a><small class="d-block text-secondary">{{ performance.match.venue.name }}</small></td><td>{{ performance.runs }}</td><td class="numeric">{{ performance.balls }}</td><td class="numeric">{{ performance.strike_rate|floatformat:2 }}</td><td class="numeric">{{ performance.wickets }}</td><td class="numeric">{{ performance.runs_conceded }}</td></tr>
+            {% empty %}
+              <tr><td colspan="7" class="table-empty">No match-level performance has been imported for this player.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
+</section>
+{% endblock %}

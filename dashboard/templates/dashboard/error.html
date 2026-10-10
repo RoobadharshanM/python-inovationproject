@@ -1,0 +1,3 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{{ status_code }} — Cricket Intelligence{% endblock %}
+{% block content %}<section class="error-page shell"><div><div class="eyebrow">Error {{ status_code }}</div><h1>{{ headline }}</h1><p>{{ message }}</p><div class="actions" style="justify-content:center"><a class="button" href="{% url 'home' %}">Return home</a></div></div></section>{% endblock %}

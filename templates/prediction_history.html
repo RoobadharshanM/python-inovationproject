@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Prediction history — Stump AI{% endblock %}
+{% block meta_description %}Review, filter and manage your saved Stump AI predictions.{% endblock %}
+{% block body_class %}prediction-history-page{% endblock %}
+
+{% block content %}
+<div class="container-xl prediction-page" data-prediction-page data-prediction-kind="score" data-model-status-url="{% url 'prediction_model_status_api' %}">
+  {% include 'partials/breadcrumbs.html' with current_label='Prediction history' %}
+  <section class="page-hero compact-hero prediction-hero"><div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-4"><div><span class="section-kicker reveal">Private workspace</span><h1 class="page-title reveal">Prediction history</h1><p class="page-lead reveal">Return to saved forecasts, inspect the model output and remove records you no longer need.</p></div><div class="d-flex flex-wrap gap-2 reveal"><a class="btn btn-ghost" href="/predictions/score/"><i class="bi bi-graph-up-arrow me-2" aria-hidden="true"></i>Score prediction</a><a class="btn btn-primary" href="/predictions/outcome/"><i class="bi bi-trophy me-2" aria-hidden="true"></i>Outcome prediction</a></div></div></section>
+
+  <section class="section-space-sm">
+    <form class="filter-panel reveal" method="get" action="/predictions/history/" data-loading-form aria-labelledby="history-filter-title">
+      <h2 class="h5 mb-3" id="history-filter-title"><i class="bi bi-funnel me-2" aria-hidden="true"></i>Filter history</h2>
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-lg-3"><label class="form-label" for="historySearch">Search</label><div class="input-icon-wrap"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" type="search" name="q" value="{{ q }}" maxlength="140" placeholder="Team, venue or result"></div></div>
+        <div class="col-12 col-sm-6 col-lg-2"><label class="form-label" for="historyType">Prediction type</label><select class="form-select" name="type" id="historyType"><option value="">All types</option>{% for value, label in prediction_types %}<option value="{{ value }}"{% if prediction_type == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div class="col-12 col-sm-6 col-lg-2"><label class="form-label" for="historyTeam">Team</label><select class="form-select" name="team" id="historyTeam"><option value="">All teams</option>{% for team_option in teams %}<option value="{{ team_option.pk }}"{% if team_filter == team_option.pk|stringformat:'s' %} selected{% endif %}>{{ team_option.name }}</option>{% endfor %}</select></div>
+        <div class="col-6 col-lg-2"><label class="form-label" for="historyFrom">From</label><input class="form-control" type="date" name="from" id="historyFrom" value="{{ date_from }}"></div>
+        <div class="col-6 col-lg-2"><label class="form-label" for="historyTo">To</label><input class="form-control" type="date" name="to" id="historyTo" value="{{ date_to }}"></div>
+        <div class="col-12 col-lg-1 d-grid"><button class="btn btn-primary" type="submit"><span class="button-label">Apply</span><span class="button-spinner spinner-border spinner-border-sm" aria-hidden="true"></span></button></div>
+      </div>
+      {% if q or prediction_type or team_filter or date_from or date_to %}<div class="d-flex justify-content-end mt-3"><a class="btn btn-sm btn-ghost" href="/predictions/history/">Clear filters</a></div>{% endif %}
+    </form>
+  </section>
+
+  <section class="section-space-sm pt-0" aria-labelledby="history-results-title">
+    {% with prediction_list=predictions %}
+    <div class="filter-summary"><div class="result-count"><strong>{{ page_obj.paginator.count|default:0 }}</strong> saved prediction{{ page_obj.paginator.count|pluralize }}</div>{% if page_obj.paginator.count %}<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>{% endif %}</div>
+    {% if prediction_list %}
+      <h2 class="visually-hidden" id="history-results-title">Saved predictions</h2>
+      <article class="table-panel"><div class="table-wrap"><table class="table"><caption class="visually-hidden">Saved prediction history</caption><thead><tr><th scope="col">Created</th><th scope="col">Type</th><th scope="col">Match context</th><th scope="col">Result</th><th scope="col">Model</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead><tbody>
+        {% for prediction in prediction_list %}
+          <tr>
+            <td><time datetime="{{ prediction.created_at|date:'c' }}">{{ prediction.created_at|date:'d M Y' }}<small class="d-block text-secondary">{{ prediction.created_at|date:'H:i' }}</small></time></td>
+            <td><span class="status-badge {% if prediction.prediction_type == 'score' %}status-badge--info{% else %}status-badge--success{% endif %}"><i class="bi {% if prediction.prediction_type == 'score' %}bi-graph-up-arrow{% else %}bi-trophy{% endif %}" aria-hidden="true"></i>{{ prediction.get_prediction_type_display }}</span></td>
+            <td><div class="history-result"><strong>{{ prediction.batting_team.name|default:'Unknown team' }} vs {{ prediction.bowling_team.name|default:'Unknown opponent' }}</strong><span>{{ prediction.venue.name|default:'Venue not supplied' }}{% if prediction.season %} · Season {{ prediction.season }}{% endif %}</span></div></td>
+            <td>{% if prediction.prediction_type == 'score' %}<div class="history-result"><strong>{% if prediction.predicted_score or prediction.predicted_score == 0 %}{{ prediction.predicted_score }} runs{% else %}Unavailable{% endif %}</strong>{% if prediction.prediction_low and prediction.prediction_high %}<span>Range {{ prediction.prediction_low }}–{{ prediction.prediction_high }}</span>{% endif %}</div>{% else %}<div class="history-result"><strong>{{ prediction.outcome_winner.name|default:'Unavailable' }}</strong>{% if prediction.outcome_probabilities %}<span>{{ prediction.outcome_probabilities|length }} probability classes</span>{% endif %}</div>{% endif %}</td>
+            <td><span class="text-secondary">{{ prediction.model_version|default:'Not published' }}</span></td>
+            <td><div class="d-flex justify-content-end gap-2"><a class="icon-button" href="/predictions/result/{{ prediction.pk }}/" aria-label="View prediction from {{ prediction.created_at|date:'d M Y' }}" title="View result"><i class="bi bi-eye" aria-hidden="true"></i></a><form class="danger-form" method="post" action="/predictions/history/{{ prediction.pk }}/delete/" data-confirm-delete data-confirm-message="Delete this saved prediction? This cannot be undone.">{% csrf_token %}<button class="icon-button text-danger" type="submit" aria-label="Delete prediction from {{ prediction.created_at|date:'d M Y' }}" title="Delete prediction"><i class="bi bi-trash" aria-hidden="true"></i></button></form></div></td>
+          </tr>
+        {% endfor %}
+      </tbody></table></div></article>
+      {% include 'partials/pagination.html' %}
+    {% else %}
+      <div class="glass-card empty-state"><span class="empty-icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span><h2>No saved predictions found</h2><p>{% if q or prediction_type or team_filter or date_from or date_to %}Try changing or clearing the active filters.{% else %}Generate a score or outcome forecast to start your private history.{% endif %}</p>{% if q or prediction_type or team_filter or date_from or date_to %}<a class="btn btn-primary" href="/predictions/history/"><i class="bi bi-arrow-counterclockwise me-2" aria-hidden="true"></i>Clear filters</a>{% else %}<a class="btn btn-primary" href="/predictions/score/"><i class="bi bi-graph-up-arrow me-2" aria-hidden="true"></i>Create a prediction</a>{% endif %}</div>
+    {% endif %}
+    {% endwith %}
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/prediction.js' %}?v=20260930-1" defer></script>{% endblock %}

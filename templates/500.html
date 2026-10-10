@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}Something went wrong — Stump AI{% endblock %}
+{% block content %}
+<section class="error-page section-space"><div class="container text-center"><div class="error-code" aria-hidden="true">500</div><span class="section-kicker">Stumps hit</span><h1>Something interrupted the analysis.</h1><p class="text-secondary fs-5 mx-auto">The request could not be completed. Your data is safe—please try again in a moment.</p><div class="d-flex justify-content-center flex-wrap gap-3"><button class="btn btn-primary" type="button" data-reload><i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i>Try again</button><a class="btn btn-ghost" href="/">Return home</a></div></div></section>
+{% endblock %}

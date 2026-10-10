@@ -1,0 +1,50 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Profile — Stump AI{% endblock %}
+{% block body_class %}account-page{% endblock %}
+{% block content %}
+<section class="page-hero compact-hero">
+  <div class="container-xl">
+    <div class="row g-4 align-items-end">
+      <div class="col-lg-8">
+        <span class="section-kicker reveal">Account</span>
+        <h1 class="page-title reveal">Your profile</h1>
+        <p class="page-lead reveal mb-0">Keep your display details current and manage your password securely.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="section-space pt-0">
+  <div class="container-xl">
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <form method="post" class="glass-card content-card h-100" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="form_kind" value="profile">
+          <span class="section-kicker">Personal information</span>
+          <h2 class="h4 mt-2 mb-4">Profile details</h2>
+          {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+          {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              <input class="form-control{% if field.errors %} is-invalid{% endif %}" type="{{ field.field.widget.input_type|default:'text' }}" name="{{ field.html_name }}" value="{{ field.value|default_if_none:'' }}" id="{{ field.id_for_label }}"{% if field.field.required %} required{% endif %}>
+              {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+          {% endfor %}
+          <button class="btn btn-primary" type="submit">Save profile</button>
+        </form>
+      </div>
+      <div class="col-lg-5">
+        <form method="post" class="glass-card content-card" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="form_kind" value="password">
+          <span class="section-kicker">Security</span>
+          <h2 class="h4 mt-2 mb-2">Change password</h2>
+          <p class="text-secondary small">Leave both fields empty to keep your current password.</p>
+          {% if password_form %}{% for field in password_form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label><input class="form-control{% if field.errors %} is-invalid{% endif %}" type="password" name="{{ field.html_name }}" id="{{ field.id_for_label }}" autocomplete="new-password">{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}{% else %}<div class="mb-3"><label class="form-label" for="new_password1">New password</label><input class="form-control" type="password" name="new_password1" id="new_password1" autocomplete="new-password"></div><div class="mb-3"><label class="form-label" for="new_password2">Confirm new password</label><input class="form-control" type="password" name="new_password2" id="new_password2" autocomplete="new-password"></div>{% endif %}
+          <button class="btn btn-ghost" type="submit">Update password</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

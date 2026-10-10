@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}{{ match.team1.name }} vs {{ match.team2.name }} — Stump AI{% endblock %}
+{% block meta_description %}Scorecard and player performances for {{ match.team1.name }} versus {{ match.team2.name }}.{% endblock %}
+{% block body_class %}match-detail-page{% endblock %}
+
+{% block content %}
+<section class="page-hero compact-hero">
+  <div class="container-xl">
+    {% include 'partials/breadcrumbs.html' with breadcrumbs=matches_breadcrumbs current_label=match %}
+    <article class="glass-card detail-hero-card reveal">
+      <div class="detail-kicker">
+        <span><i class="bi bi-calendar3 me-2" aria-hidden="true"></i>{{ match.date|date:'l, d F Y' }} · Season {{ match.season }}</span>
+        <span class="d-flex flex-wrap gap-2">
+          <span class="status-badge">{{ match.get_match_type_display|default:'Match' }}</span>
+          <span class="status-badge">{{ match.get_result_type_display|default:match.result_type }}</span>
+          {% if match.dl_applied %}<span class="status-badge status-badge--info">DLS applied</span>{% endif %}
+        </span>
+      </div>
+
+      <div class="detail-scoreboard">
+        <div class="detail-team">
+          {% include 'partials/team_crest.html' with team=match.team1 size='lg' decorative=True %}
+          <span class="min-w-0"><span class="detail-team-name">{{ match.team1.name }}</span><span class="detail-team-score">Team 1</span></span>
+        </div>
+        <span class="detail-vs" aria-label="Versus">VS</span>
+        <div class="detail-team">
+          {% include 'partials/team_crest.html' with team=match.team2 size='lg' decorative=True %}
+          <span class="min-w-0"><span class="detail-team-name">{{ match.team2.name }}</span><span class="detail-team-score">Team 2</span></span>
+        </div>
+      </div>
+
+      <div class="text-center">
+        {% if match.winner %}<span class="status-badge status-badge--success"><i class="bi bi-trophy me-1" aria-hidden="true"></i>{{ match.winner.name }} won</span>{% else %}<span class="status-badge status-badge--warning">No recorded winner</span>{% endif %}
+        <p class="fs-5 mt-3 mb-0">{{ match.result_summary }}</p>
+        {% if match.dismissal_method %}<p class="text-secondary small mt-2 mb-0">{{ match.get_dismissal_method_display }}</p>{% endif %}
+      </div>
+
+      <div class="detail-facts">
+        <div class="detail-fact"><span>Venue</span><strong>{{ venue.name }}</strong></div>
+        <div class="detail-fact"><span>City</span><strong>{{ match.city|default:venue.city|default:'Not recorded' }}</strong></div>
+        <div class="detail-fact"><span>Toss</span><strong>{% if match.toss_winner %}{{ match.toss_winner.name }} — {{ match.get_toss_decision_display|default:'Decision unavailable' }}{% else %}Not recorded{% endif %}</strong></div>
+        <div class="detail-fact"><span>Match ID</span><strong>{{ match.external_id|default:match.pk }}</strong></div>
+        {% if match.target_runs %}<div class="detail-fact"><span>Target</span><strong>{{ match.target_runs }} runs{% if match.target_overs %} from {{ match.target_overs }} overs{% endif %}</strong></div>{% endif %}
+        {% if player_of_match %}<div class="detail-fact"><span>Player of the match</span><strong><a class="table-link" href="/players/{{ player_of_match.pk }}/">{{ player_of_match.name }}</a></strong></div>{% endif %}
+        {% if match.umpires %}<div class="detail-fact"><span>Umpires</span><strong>{% for umpire in match.umpires %}{{ umpire }}{% if not forloop.last %}, {% endif %}{% endfor %}</strong></div>{% endif %}
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="section-space-sm" aria-labelledby="scorecards-title">
+  <div class="container-xl">
+    <div class="d-flex flex-wrap gap-3 align-items-end justify-content-between mb-4">
+      <div><span class="section-kicker">Scorecards</span><h2 class="h3 mt-2 mb-0" id="scorecards-title">Innings summary</h2></div>
+      <a class="btn btn-ghost" href="/matches/"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>All matches</a>
+    </div>
+    {% if has_scorecards %}
+      <div class="row g-3">
+        {% for innings in innings_list %}
+          <div class="col-12 col-lg-6">
+            <article class="glass-card scorecard h-100">
+              <header class="scorecard-header">
+                <div class="scorecard-team">
+                  {% include 'partials/team_crest.html' with team=innings.team size='sm' decorative=True %}
+                  <span>{{ innings.team.name }}<small class="d-block text-secondary">Innings {{ innings.innings }}</small></span>
+                </div>
+                <div class="scorecard-score">{{ innings.runs }}/{{ innings.wickets }} <small>({{ innings.overs_display }} overs)</small></div>
+              </header>
+              <div class="entity-stat-row">
+                <div class="entity-stat"><strong>{{ innings.runs }}</strong><span>Runs</span></div>
+                <div class="entity-stat"><strong>{{ innings.wickets }}</strong><span>Wickets</span></div>
+                <div class="entity-stat"><strong>{{ innings.extras }}</strong><span>Extras</span></div>
+              </div>
+            </article>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="glass-card empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-card-list"></i></span>
+        <h2>{{ empty_state_title|default:'No scorecard imported' }}</h2>
+        <p>{{ empty_state_message|default:'Delivery data is not available for this match.' }}</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="section-space-sm pt-0" aria-label="Player performances">
+  <div class="container-xl">
+    <div class="row g-3">
+      <div class="col-12 col-xl-6">
+        <article class="table-panel h-100">
+          <header class="table-panel-header"><div><h2>Batting performances</h2><p class="text-secondary mb-0">Runs, balls and boundary output.</p></div><span class="status-badge">{{ batting_performances|length }} records</span></header>
+          <div class="table-wrap">
+            <table class="table">
+              <caption class="visually-hidden">Batting performances</caption>
+              <thead><tr><th scope="col">Player</th><th scope="col" class="numeric">Runs</th><th scope="col" class="numeric">Balls</th><th scope="col" class="numeric">SR</th><th scope="col" class="numeric">4s</th><th scope="col" class="numeric">6s</th></tr></thead>
+              <tbody>
+                {% for performance in batting_performances %}
+                  <tr><td><a class="table-link" href="/players/{{ performance.player.pk }}/">{{ performance.player.name }}</a>{% if performance.player.current_team %}<small class="d-block text-secondary">{{ performance.player.current_team.name }}</small>{% endif %}</td><td class="numeric">{{ performance.runs }}</td><td class="numeric">{{ performance.balls }}</td><td class="numeric">{{ performance.strike_rate|floatformat:2 }}</td><td class="numeric">{{ performance.fours }}</td><td class="numeric">{{ performance.sixes }}</td></tr>
+                {% empty %}
+                  <tr><td colspan="6" class="table-empty">No batting performance is available for this match.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+      <div class="col-12 col-xl-6">
+        <article class="table-panel h-100">
+          <header class="table-panel-header"><div><h2>Bowling performances</h2><p class="text-secondary mb-0">Overs, wickets and economy.</p></div><span class="status-badge">{{ bowling_performances|length }} records</span></header>
+          <div class="table-wrap">
+            <table class="table">
+              <caption class="visually-hidden">Bowling performances</caption>
+              <thead><tr><th scope="col">Player</th><th scope="col" class="numeric">Overs</th><th scope="col" class="numeric">Wickets</th><th scope="col" class="numeric">Runs conceded</th><th scope="col" class="numeric">Catches</th></tr></thead>
+              <tbody>
+                {% for performance in bowling_performances %}
+                  <tr><td><a class="table-link" href="/players/{{ performance.player.pk }}/">{{ performance.player.name }}</a>{% if performance.player.current_team %}<small class="d-block text-secondary">{{ performance.player.current_team.name }}</small>{% endif %}</td><td class="numeric">{{ performance.overs|floatformat:1 }}</td><td class="numeric">{{ performance.wickets }}</td><td class="numeric">{{ performance.runs_conceded }}</td><td class="numeric">{{ performance.catches }}</td></tr>
+                {% empty %}
+                  <tr><td colspan="5" class="table-empty">No bowling performance is available for this match.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

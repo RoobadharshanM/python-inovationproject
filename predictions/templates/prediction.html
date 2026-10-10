@@ -1,0 +1,42 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{{ page_title|default:"Score prediction" }} — Cricket Intelligence{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="shell">
+    <div class="page-head">
+      <div class="eyebrow">Machine learning</div>
+      <h1>Score prediction</h1>
+      <p>Choose the match context and receive an innings score estimate from the saved, offline-trained model.</p>
+    </div>
+
+    {% if model_error %}
+      <div class="message" role="alert"><strong>Model unavailable.</strong> {{ model_error }}</div>
+    {% endif %}
+    {% if form.non_field_errors %}
+      <div class="message" role="alert">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="panel form-card">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% for field in form %}
+          <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+            {{ field }}
+            {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+            {% if field.errors %}
+              <ul class="errorlist" role="alert">
+                {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+        {% endfor %}
+        <button class="button" type="submit"><span aria-hidden="true">✦</span> Predict score</button>
+      </form>
+    </div>
+    <p class="tiny mt-3">The estimate is generated from historical match data. No model is trained while you use this form.</p>
+  </div>
+</section>
+{% endblock %}

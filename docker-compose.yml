@@ -1,0 +1,93 @@
+# Stump AI - full stack for local runs and a Jenkins-driven deployment.
+#
+#   docker compose up --build          web + postgres
+#   docker compose --profile ci up -d  adds the Jenkins controller
+#
+# The web container is stateless apart from three named volumes, so it can be
+# replaced freely by a Jenkins redeploy.
+
+name: stump-ai
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ipl}
+      POSTGRES_USER: ${DB_USER:-ipl}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me-in-production}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ipl} -d ${DB_NAME:-ipl}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-insecure-development-key-change-me}
+      DJANGO_ALLOW_ALL_HOSTS: ${DJANGO_ALLOW_ALL_HOSTS:-1}
+      DB_ENGINE: postgresql
+      DB_NAME: ${DB_NAME:-ipl}
+      DB_USER: ${DB_USER:-ipl}
+      DB_PASSWORD: ${DB_PASSWORD:-change-me-in-production}
+      DB_HOST: db
+      DB_PORT: "5432"
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-3}
+      WEB_TIMEOUT: ${WEB_TIMEOUT:-120}
+      IMPORT_SKIP_DATA: ${IMPORT_SKIP_DATA:-0}
+      TRAIN_SKIP_MODELS: ${TRAIN_SKIP_MODELS:-0}
+      CREATE_SUPERUSER: ${CREATE_SUPERUSER:-0}
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-}
+      TIME_ZONE: ${TIME_ZONE:-Asia/Kolkata}
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    volumes:
+      - staticfiles:/app/staticfiles
+      - media:/app/media
+      # Model artifacts and the import fingerprint must survive a container
+      # rebuild, otherwise every deploy retrains the models from scratch.
+      - modeldata:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8000/health/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  jenkins:
+    image: jenkins/jenkins:lts-jdk21
+    profiles: ["ci"]
+    restart: unless-stopped
+    user: root
+    privileged: true
+    ports:
+      - "8080:8080"   # Jenkins UI
+      - "50000:50000" # webhook agents
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false -Djava.awt.headless=true"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      # Give the controller access to the Docker socket so it can build images.
+      # Required only on Linux; on Docker Desktop macOS mount the host path
+      # shown by `docker info | grep 'Docker Root Dir'` instead.
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  pgdata:
+  staticfiles:
+  media:
+  modeldata:
+  jenkins_home:

@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}Matches — Stump AI{% endblock %}
+{% block meta_description %}Search and filter cricket matches by season, team, venue and winner.{% endblock %}
+{% block body_class %}matches-page{% endblock %}
+
+{% block content %}
+<section class="page-hero compact-hero">
+  <div class="container-xl">
+    {% include 'partials/breadcrumbs.html' with current_label='Matches' %}
+    <div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-4">
+      <div>
+        <span class="section-kicker reveal">Match archive</span>
+        <h1 class="page-title reveal">Follow the season, one match at a time.</h1><!-- LIVE_RELOAD_PROBE_9271 -->
+        <p class="page-lead reveal">Search teams, grounds, cities, winners and match IDs. Every result links to its imported scorecard and player performances.</p>
+      </div>
+      <div class="profile-summary reveal">
+        <span class="mini-label">Available archive</span>
+        <strong class="d-block fs-3">{{ available_count|default:0 }}</strong>
+        <span class="text-secondary">matches in the database</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-space-sm" aria-labelledby="match-filters-title">
+  <div class="container-xl">
+    <form class="filter-panel reveal" method="get" action="/matches/" data-loading-form aria-labelledby="match-filters-title">
+      <h2 class="h5 mb-3" id="match-filters-title"><i class="bi bi-funnel me-2" aria-hidden="true"></i>Filter matches</h2>
+      {% include 'partials/login_form_errors.html' %}
+      <div class="filter-grid">
+        <div>
+          <label class="form-label" for="{{ filter_form.q.id_for_label }}">{{ filter_form.q.label }}</label>
+          <div class="input-icon-wrap"><i class="bi bi-search" aria-hidden="true"></i>{{ filter_form.q }}</div>
+          {% for error in filter_form.q.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label" for="{{ filter_form.season.id_for_label }}">{{ filter_form.season.label }}</label>
+          {{ filter_form.season }}
+          {% for error in filter_form.season.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label" for="{{ filter_form.team.id_for_label }}">Team</label>
+          {{ filter_form.team }}
+          {% for error in filter_form.team.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label" for="{{ filter_form.venue.id_for_label }}">Venue</label>
+          {{ filter_form.venue }}
+          {% for error in filter_form.venue.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary" type="submit"><i class="bi bi-funnel me-2" aria-hidden="true"></i>Apply</button>
+          {% if has_filters %}<a class="btn btn-ghost" href="/matches/">Clear</a>{% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="section-space-sm pt-0" aria-labelledby="match-results-title">
+  <div class="container-xl">
+    <div class="filter-summary">
+      <div class="result-count"><strong>{{ total_count|default:0 }}</strong> match{{ total_count|pluralize }} found{% if has_filters %} for the active filters{% endif %}</div>
+      {% if has_filters %}<a class="btn btn-sm btn-ghost" href="/matches/"><i class="bi bi-x-circle me-1" aria-hidden="true"></i>Reset filters</a>{% endif %}
+    </div>
+
+    {% if matches %}
+      <h2 class="visually-hidden" id="match-results-title">Match results</h2>
+      <div class="entity-grid">
+        {% for match in matches %}
+          <a class="entity-card reveal" href="/matches/{{ match.pk }}/">
+            <div class="entity-card-top entity-card-top--duel">
+              <span class="crest-pair">
+                {% include 'partials/team_crest.html' with team=match.team1 size='md' decorative=True %}
+                <span class="crest-pair-vs" aria-hidden="true">v</span>
+                {% include 'partials/team_crest.html' with team=match.team2 size='md' decorative=True %}
+              </span>
+              <div class="entity-card-identity">
+                <h2>{{ match.team1.name }} <span class="text-secondary">vs</span> {{ match.team2.name }}</h2>
+                <div class="entity-subtitle">{{ match.date|date:'d M Y' }} · {{ match.city|default:match.venue.city|default:'City unavailable' }}</div>
+              </div>
+            </div>
+            <div class="entity-card-body">
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                {% if match.winner %}<span class="status-badge status-badge--success"><i class="bi bi-trophy" aria-hidden="true"></i>{{ match.winner.name }} won</span>{% else %}<span class="status-badge status-badge--warning"><i class="bi bi-dash-circle" aria-hidden="true"></i>No recorded winner</span>{% endif %}
+                <span class="status-badge">{{ match.get_match_type_display }}</span>
+                {% if match.dl_applied %}<span class="status-badge status-badge--info">DLS applied</span>{% endif %}
+              </div>
+              <p class="text-secondary small mt-3 mb-0">{{ match.result_summary }}</p>
+            </div>
+            <div class="entity-card-footer">
+              <span><i class="bi bi-calendar3 me-1" aria-hidden="true"></i>Season {{ match.season }}</span>
+              <span><i class="bi bi-arrow-right" aria-hidden="true"></i>Scorecard</span>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+      {% include 'partials/pagination.html' %}
+    {% else %}
+      <div class="glass-card empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-search"></i></span>
+        <h2>{{ empty_state_title|default:'No matches found' }}</h2>
+        <p>{{ empty_state_message|default:'Try changing or clearing the active filters.' }}</p>
+        {% if has_filters %}<a class="btn btn-primary" href="/matches/"><i class="bi bi-arrow-counterclockwise me-2" aria-hidden="true"></i>Clear filters</a>{% else %}<code class="code-chip">{{ command_hint|default:'python manage.py import_ipl_data' }}</code>{% endif %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

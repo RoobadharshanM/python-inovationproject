@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}Access denied — Stump AI{% endblock %}
+{% block content %}
+<section class="error-page section-space"><div class="container text-center"><div class="error-code" aria-hidden="true">403</div><span class="section-kicker">Access denied</span><h1>That page is outside your boundary.</h1><p class="text-secondary fs-5 mx-auto">You do not have permission to view this resource. Sign in with an authorized account or return to the dashboard.</p><div class="d-flex justify-content-center flex-wrap gap-3"><a class="btn btn-primary" href="/">Return home</a>{% if user.is_authenticated %}<a class="btn btn-ghost" href="/dashboard/">Go to dashboard</a>{% else %}<a class="btn btn-ghost" href="{% url 'login' %}">Sign in</a>{% endif %}</div></div></section>
+{% endblock %}

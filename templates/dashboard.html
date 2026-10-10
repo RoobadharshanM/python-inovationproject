@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Performance dashboard — Stump AI{% endblock %}
+{% block meta_description %}Explore fourteen live cricket data visualizations spanning matches, teams, players, venues and seasons.{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block content %}
+<section class="page-hero compact-hero" data-dashboard data-dashboard-endpoint="{{ dashboard_api_url|default:'/api/dashboard-stats/' }}" data-api-url="{{ dashboard_api_url }}" data-has-data="{% if has_data %}true{% else %}false{% endif %}">
+  <div class="container-xl">
+    {% include 'partials/breadcrumbs.html' with current_label='Dashboard' %}
+    <div class="d-flex flex-column flex-xl-row align-items-xl-end justify-content-between gap-4">
+      <div><div class="eyebrow-pill reveal"><span></span> Season intelligence</div><h1 class="page-title reveal">Performance dashboard</h1><p class="page-lead reveal">Fourteen responsive views of the same live cricket records—volume, scoring, tactics, players, venues and season patterns.</p></div>
+      <div class="page-header-actions reveal"><div><label class="form-label mb-1" for="dashboardSeason">Season</label><select class="form-select" id="dashboardSeason" name="season" aria-describedby="dashboardStatus"><option value="">All seasons</option></select></div><button class="btn btn-primary align-self-end" id="dashboardRefresh" type="button"><i class="bi bi-arrow-clockwise me-2 spin" aria-hidden="true"></i>Refresh data</button></div>
+    </div>
+    <div class="status-line mt-4 reveal"><span class="data-status" data-dashboard-status data-state="loading" role="status" aria-live="polite">Loading live database statistics…</span><span class="text-secondary ms-md-auto" data-last-updated></span></div>
+    <div class="alert alert-danger page-error-state d-flex gap-2" id="dashboardError" data-dashboard-error role="alert" hidden><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><div><strong>Dashboard data could not be refreshed.</strong><div data-dashboard-error-message>The server did not return dashboard statistics. No sample values were substituted.</div></div></div>
+  </div>
+</section>
+
+<section class="section-space-sm" aria-labelledby="dashboard-kpis-title">
+  <div class="container-xl"><h2 class="visually-hidden" id="dashboard-kpis-title">Key performance indicators</h2><div class="stat-grid dashboard-kpi-grid">
+    <article class="stat-card"><div class="stat-label"><i class="bi bi-calendar3" aria-hidden="true"></i><span>Matches</span></div><strong class="stat-value" id="kpiMatches">{{ counts.matches|default:0 }}</strong><div class="stat-meta">Active selection</div></article>
+    <article class="stat-card"><div class="stat-label"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Completed</span></div><strong class="stat-value" id="kpiCompleted">—</strong><div class="stat-meta">Recorded winners</div></article>
+    <article class="stat-card"><div class="stat-label"><i class="bi bi-activity" aria-hidden="true"></i><span>Runs scored</span></div><strong class="stat-value" id="kpiRuns">—</strong><div class="stat-meta">Imported innings</div></article>
+    <article class="stat-card"><div class="stat-label"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Average score</span></div><strong class="stat-value" id="kpiAverage">—</strong><div class="stat-meta">Per innings</div></article>
+    <article class="stat-card"><div class="stat-label"><i class="bi bi-shield" aria-hidden="true"></i><span>Teams</span></div><strong class="stat-value" id="kpiTeams">{{ counts.teams|default:0 }}</strong><div class="stat-meta">Team archive</div></article>
+    <article class="stat-card"><div class="stat-label"><i class="bi bi-people" aria-hidden="true"></i><span>Players</span></div><strong class="stat-value" id="kpiPlayers">{{ counts.players|default:0 }}</strong><div class="stat-meta">Player archive</div></article>
+    <article class="stat-card"><div class="stat-label"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Venues</span></div><strong class="stat-value" id="kpiVenues">{{ counts.venues|default:0 }}</strong><div class="stat-meta">Venue archive</div></article>
+    <article class="stat-card"><div class="stat-label"><i class="bi bi-bullseye" aria-hidden="true"></i><span>Wickets</span></div><strong class="stat-value" id="kpiWickets">—</strong><div class="stat-meta">Recorded wickets</div></article>
+  </div></div>
+</section>
+
+<section class="section-space-sm pt-0" aria-labelledby="dashboard-charts-title">
+  <div class="container-xl">
+    <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-4"><div><span class="section-kicker">Visual analysis</span><h2 class="h3 mt-2 mb-0" id="dashboard-charts-title">Fourteen ways to read the game</h2></div><p class="text-secondary mb-0"><i class="bi bi-info-circle me-2" aria-hidden="true"></i>Every value comes directly from the dashboard API.</p></div>
+    <div class="row g-3 dashboard-chart-grid" aria-busy="true">
+      {% include 'partials/chart_card.html' with chart_id='matchesBySeasonChart' title='Matches and scoring by season' subtitle='Match volume, runs and average innings score' kicker='Trend' %}
+      {% include 'partials/chart_card.html' with chart_id='teamWinsChart' title='Team wins' subtitle='Completed matches grouped by winner' kicker='Results' %}
+      {% include 'partials/chart_card.html' with chart_id='teamRunsChart' title='Runs by team' subtitle='Aggregated innings output' kicker='Scoring' %}
+      {% include 'partials/chart_card.html' with chart_id='teamAverageChart' title='Average team score' subtitle='Mean runs per recorded innings' kicker='Scoring' %}
+      {% include 'partials/chart_card.html' with chart_id='topBattersChart' title='Leading batters' subtitle='Top run contributors in the selection' kicker='Batters' %}
+      {% include 'partials/chart_card.html' with chart_id='topBowlersChart' title='Leading bowlers' subtitle='Top wicket contributors in the selection' kicker='Bowlers' %}
+      {% include 'partials/chart_card.html' with chart_id='winPercentagesChart' title='Win share by team' subtitle='Wins as a share of matches played' kicker='Outcomes' %}
+      {% include 'partials/chart_card.html' with chart_id='tossDecisionsChart' title='Toss decisions' subtitle='Recorded choices to bat or field' kicker='Tactics' %}
+      {% include 'partials/chart_card.html' with chart_id='matchesByVenueChart' title='Matches by venue' subtitle='Match volume and scoring grouped by ground' kicker='Venues' %}
+      {% include 'partials/chart_card.html' with chart_id='battingChasingChart' title='Batting-first vs chasing wins' subtitle='How completed matches were won' kicker='Tactics' %}
+      {% include 'partials/chart_card.html' with chart_id='wicketsChart' title='Wickets by team' subtitle='Wicket contribution in player rollups' kicker='Bowling' %}
+      {% include 'partials/chart_card.html' with chart_id='teamRadarChart' title='Team comparison radar' subtitle='Normalized across the leading teams' kicker='Comparison' %}
+      {% include 'partials/chart_card.html' with chart_id='playerOutputScatterChart' title='Player runs against wickets' subtitle='Batting and bowling output for players present in both lists' kicker='Correlation' %}
+      <div class="col-12 chart-column"><article class="glass-card chart-card" data-chart-card="seasonHeatmapChart"><header class="chart-card-header"><div><p class="chart-kicker mb-1">Season matrix</p><h2 class="chart-title">Performance heatmap</h2><p class="chart-subtitle mb-0">Actual match, run and average-score values by season</p></div><span class="chart-status" data-chart-status><span class="status-dot"></span>Live data</span></header><div class="heatmap-wrap" id="seasonHeatmapChart" data-heatmap><div class="chart-empty heatmap-empty" data-chart-empty hidden><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i><span>No matrix data available</span></div></div></article></div>
+    </div>
+  </div>
+</section>
+
+<section class="section-space-sm pt-0" aria-label="Dashboard supporting tables"><div class="container-xl"><div class="row g-3"><div class="col-12 col-xl-7"><article class="table-panel h-100"><header class="table-panel-header"><div><h2>Team comparison</h2><p class="text-secondary mb-0">Aggregated output in the selected dataset.</p></div></header><div class="table-wrap"><table class="table"><caption class="visually-hidden">Team comparison statistics</caption><thead><tr><th scope="col">Team</th><th scope="col" class="numeric">Played</th><th scope="col" class="numeric">Won</th><th scope="col" class="numeric">Win %</th><th scope="col" class="numeric">Runs</th><th scope="col" class="numeric">Avg score</th><th scope="col" class="numeric">Wickets</th></tr></thead><tbody id="dashboardComparisonBody"><tr><td colspan="7" class="table-empty"><span class="skeleton skeleton-line" aria-label="Loading team comparison"></span></td></tr></tbody></table></div></article></div><div class="col-12 col-xl-5"><article class="table-panel h-100"><header class="table-panel-header"><div><h2>Recent matches</h2><p class="text-secondary mb-0">Latest records in the active selection.</p></div></header><div class="table-wrap"><table class="table"><caption class="visually-hidden">Recent matches</caption><thead><tr><th scope="col">Date</th><th scope="col">Match</th><th scope="col">Winner</th></tr></thead><tbody id="dashboardRecentBody"><tr><td colspan="3" class="table-empty"><span class="skeleton skeleton-line" aria-label="Loading recent matches"></span></td></tr></tbody></table></div></article></div></div><noscript><div class="alert alert-warning mt-3">Enable JavaScript to refresh dashboard charts. Initial archive counts remain available above.</div></noscript></div></section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/dashboard.js' %}?v=20260930-2" defer></script>{% endblock %}

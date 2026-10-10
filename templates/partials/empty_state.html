@@ -1,0 +1,6 @@
+<div class="empty-state glass-card text-center">
+  <span class="empty-icon" aria-hidden="true"><i class="bi bi-search"></i></span>
+  <h2 class="h5">{{ title|default:'Nothing to show yet' }}</h2>
+  <p class="text-secondary mb-3">{{ message|default:'Try changing or clearing the active filters.' }}</p>
+  {% if action_url %}<a class="btn btn-outline-primary" href="{{ action_url }}"><i class="bi bi-arrow-counterclockwise me-2" aria-hidden="true"></i>{{ action_label|default:'Clear filters' }}</a>{% endif %}
+</div>

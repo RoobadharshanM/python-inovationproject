@@ -1,0 +1,40 @@
+<footer class="site-footer">
+  <div class="container-xl">
+    <div class="footer-main row g-4 align-items-start">
+      <div class="col-lg-5">
+        <a class="brand-mark mb-3" href="/" aria-label="Stump AI home">
+          <span class="brand-ball" aria-hidden="true"><span></span></span>
+          <span>STUMP<span class="brand-accent">AI</span></span>
+        </a>
+        <p class="footer-copy">Cricket intelligence for exploring matches, players, venues and evidence-based predictions.</p>
+      </div>
+      <div class="col-6 col-lg-2 offset-lg-1">
+        <h2 class="footer-heading">Explore</h2>
+        <ul class="footer-links list-unstyled">
+          <li><a href="/matches/">Matches</a></li>
+          <li><a href="/players/">Players</a></li>
+          <li><a href="/analytics/">Analytics</a></li>
+        </ul>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h2 class="footer-heading">Models</h2>
+        <ul class="footer-links list-unstyled">
+          <li><a href="/predictions/score/">Score forecast</a></li>
+          <li><a href="/predictions/outcome/">Match outcome</a></li>
+          {% if user.is_authenticated %}<li><a href="/predictions/history/">My history</a></li>{% endif %}
+        </ul>
+      </div>
+      <div class="col-lg-2">
+        <h2 class="footer-heading">Platform</h2>
+        <ul class="footer-links list-unstyled">
+          <li><a href="/about/">About</a></li>
+          <li><a href="/accounts/profile/">Account</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+      <p class="mb-0">&copy; {% now "Y" %} Stump AI. Cricket data, clearer decisions.</p>
+      <p class="mb-0 d-flex align-items-center gap-2"><i class="bi bi-shield-check" aria-hidden="true"></i>Built with Django &amp; Bootstrap</p>
+    </div>
+  </div>
+</footer>

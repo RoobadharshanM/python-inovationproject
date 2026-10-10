@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Sign in — Stump AI{% endblock %}
+{% block meta_description %}Sign in to access your Stump AI dashboard and saved cricket predictions.{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<section class="auth-section section-space">
+  <div class="container">
+    <div class="auth-shell glass-card mx-auto">
+      <div class="row g-0">
+        <div class="col-lg-5 auth-aside">
+          <div class="auth-aside-content">
+            <a class="brand-mark" href="/"><span class="brand-ball" aria-hidden="true"><span></span></span><span>STUMP<span class="brand-accent">AI</span></span></a>
+            <div>
+              <span class="section-kicker">Welcome back</span>
+              <h1>Return to your analysis.</h1>
+              <p>Review saved forecasts, revisit filters and keep exploring the game through a clearer lens.</p>
+            </div>
+            <ul class="auth-points list-unstyled">
+              <li><i class="bi bi-check2" aria-hidden="true"></i>Private prediction history</li>
+              <li><i class="bi bi-check2" aria-hidden="true"></i>Shareable filter views</li>
+              <li><i class="bi bi-check2" aria-hidden="true"></i>Responsive dashboards</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-7 auth-form-panel">
+          <div class="auth-form-wrap">
+            <span class="section-kicker">Account access</span>
+            <h2>Sign in to Stump AI</h2>
+            <p class="text-secondary mb-4">Use the credentials associated with your account.</p>
+            {% include 'partials/login_form_errors.html' %}
+            <form method="post" action="{% url 'login' %}" data-loading-form>
+              {% csrf_token %}
+              {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
+              <div class="mb-3">
+                <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
+                <div class="input-icon-wrap"><i class="bi bi-person" aria-hidden="true"></i><input class="form-control{% if form.username.errors %} is-invalid{% endif %}" type="text" name="username" value="{{ form.username.value|default_if_none:'' }}" autocomplete="username" maxlength="150" required autofocus id="{{ form.username.id_for_label }}"{% if form.username.errors %} aria-describedby="username_error"{% endif %}></div>
+                {% for error in form.username.errors %}<div class="invalid-feedback d-block" id="username_error">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
+                <div class="input-icon-wrap"><i class="bi bi-lock" aria-hidden="true"></i><input class="form-control{% if form.password.errors %} is-invalid{% endif %}" type="password" name="password" autocomplete="current-password" required id="{{ form.password.id_for_label }}"{% if form.password.errors %} aria-describedby="password_error"{% endif %}><button class="password-toggle" type="button" data-password-toggle aria-label="Show password" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button></div>
+                {% for error in form.password.errors %}<div class="invalid-feedback d-block" id="password_error">{{ error }}</div>{% endfor %}
+              </div>
+              <button class="btn btn-primary w-100 btn-lg" type="submit"><span class="button-label">Sign in</span><span class="button-spinner spinner-border spinner-border-sm" aria-hidden="true"></span></button>
+            </form>
+            <p class="auth-switch text-center mb-0">New to Stump AI? <a href="{% url 'register' %}">Create an account</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

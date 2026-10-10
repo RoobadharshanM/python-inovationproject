@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Outcome prediction — Stump AI{% endblock %}
+{% block meta_description %}Estimate a match winner with transparent team, venue, season and toss context.{% endblock %}
+{% block body_class %}prediction-page{% endblock %}
+
+{% block content %}
+<div class="container-xl prediction-page" data-prediction-page data-prediction-kind="outcome" data-model-status-url="{% url 'prediction_model_status_api' %}">
+  {% include 'partials/breadcrumbs.html' with current_label='Outcome prediction' %}
+  <section class="page-hero compact-hero prediction-hero">
+    <div class="row align-items-end g-4">
+      <div class="col-lg-8"><div class="eyebrow-pill reveal"><span></span> Outcome forecast</div><h1 class="page-title reveal">Read the likely result—and its uncertainty.</h1><p class="page-lead reveal mb-0">Choose the matchup and context. Probabilities are shown only when the classifier actually returns them.</p></div>
+      <div class="col-lg-4 text-lg-end reveal"><a class="btn btn-ghost" href="/predictions/score/"><i class="bi bi-graph-up me-2" aria-hidden="true"></i>Predict a score</a></div>
+    </div>
+  </section>
+
+  {% with outcome_form=form %}
+  {% if user.is_authenticated and outcome_form %}
+    <div class="row g-3 prediction-layout">
+      <div class="col-xl-8">
+        <form method="post" action="/predictions/outcome/" class="glass-card prediction-form-card" data-loading-form data-prediction-form data-prediction-kind="outcome">
+          {% csrf_token %}
+          <header class="form-section-header"><span class="form-step">01</span><div><span class="section-kicker">Outcome model</span><h2>Choose the matchup</h2><p class="text-secondary mb-0">Both teams are required for a meaningful prediction.</p></div></header>
+          {% if model_error %}<div class="alert alert-danger d-flex gap-2" role="alert" tabindex="-1"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><div><strong>The forecast could not be completed.</strong><div>{{ model_error }}</div></div></div>{% endif %}
+          {% if outcome_form.non_field_errors %}<div class="alert alert-danger d-flex gap-2" role="alert" tabindex="-1"><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i><div>{% for error in outcome_form.non_field_errors %}<div>{{ error }}</div>{% endfor %}</div></div>{% endif %}
+          {% if not teams or not venues %}<div class="alert alert-warning d-flex gap-2" role="alert"><i class="bi bi-exclamation-circle" aria-hidden="true"></i><div>Import at least one team and one venue before requesting a model forecast.</div></div>{% endif %}
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label required-label" for="outcomeTeamOne">First team <span aria-hidden="true">*</span></label><select class="form-select{% if outcome_form.batting_team.errors %} is-invalid{% endif %}" id="outcomeTeamOne" name="batting_team" required><option value="">Select a team</option>{% for team in teams %}<option value="{{ team.pk }}"{% if outcome_form.batting_team.value|stringformat:'s' == team.pk|stringformat:'s' %}selected{% endif %}>{{ team.name }}</option>{% endfor %}</select>{% for error in outcome_form.batting_team.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+            <div class="col-md-6"><label class="form-label required-label" for="outcomeTeamTwo">Second team <span aria-hidden="true">*</span></label><select class="form-select{% if outcome_form.bowling_team.errors %} is-invalid{% endif %}" id="outcomeTeamTwo" name="bowling_team" required><option value="">Select a team</option>{% for team in teams %}<option value="{{ team.pk }}"{% if outcome_form.bowling_team.value|stringformat:'s' == team.pk|stringformat:'s' %}selected{% endif %}>{{ team.name }}</option>{% endfor %}</select>{% for error in outcome_form.bowling_team.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+            <div class="col-md-6"><label class="form-label required-label" for="outcomeVenue">Venue <span aria-hidden="true">*</span></label><select class="form-select{% if outcome_form.venue.errors %} is-invalid{% endif %}" id="outcomeVenue" name="venue" required><option value="">Select a venue</option>{% for venue in venues %}<option value="{{ venue.pk }}"{% if outcome_form.venue.value|stringformat:'s' == venue.pk|stringformat:'s' %}selected{% endif %}>{{ venue.name }}{% if venue.city %} · {{ venue.city }}{% endif %}</option>{% endfor %}</select>{% for error in outcome_form.venue.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+            <div class="col-md-6"><label class="form-label" for="outcomeSeason">Season <span class="text-secondary fw-normal">(optional)</span></label><input class="form-control{% if outcome_form.season.errors %} is-invalid{% endif %}" id="outcomeSeason" name="season" type="number" min="2000"{% if current_year %} max="{{ current_year|add:1 }}"{% endif %} inputmode="numeric" value="{{ outcome_form.season.value|default_if_none:'' }}" placeholder="Use the model default">{% for error in outcome_form.season.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+          </div>
+
+          <header class="form-section-header section-spacer"><span class="form-step">02</span><div><h2>Add match context</h2><p class="text-secondary mb-0">Optional inputs can refine the estimate.</p></div></header>
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label" for="outcomeTossWinner">Toss winner <span class="text-secondary fw-normal">(optional)</span></label><select class="form-select" id="outcomeTossWinner" name="toss_winner"><option value="">Not known</option>{% for team in teams %}<option value="{{ team.pk }}"{% if outcome_form.toss_winner.value|stringformat:'s' == team.pk|stringformat:'s' %}selected{% endif %}>{{ team.name }}</option>{% endfor %}</select></div>
+            <div class="col-md-6"><label class="form-label" for="outcomeTossDecision">Toss decision <span class="text-secondary fw-normal">(optional)</span></label><select class="form-select" id="outcomeTossDecision" name="toss_decision"><option value="">Not known</option><option value="bat"{% if outcome_form.toss_decision.value == 'bat' %}selected{% endif %}>Bat first</option><option value="field"{% if outcome_form.toss_decision.value == 'field' %}selected{% endif %}>Field first</option></select></div>
+          </div>
+          <div class="form-actions"><a class="btn btn-ghost" href="/predictions/score/">Predict score instead</a><button class="btn btn-primary btn-lg" type="submit"{% if not teams or not venues %} disabled{% endif %}><span class="button-label"><i class="bi bi-trophy me-2" aria-hidden="true"></i>Estimate match outcome</span><span class="button-spinner spinner-border spinner-border-sm" aria-hidden="true"></span></button></div>
+        </form>
+      </div>
+      <aside class="col-xl-4"><div class="glass-card prediction-aside sticky-xl-top"><span class="section-kicker">Model status</span><h2 class="h4 mt-2 mb-3">Readiness check</h2><div class="model-status-card" data-model-status data-state="loading" role="status" aria-live="polite"><div class="model-status-title"><i class="bi bi-hourglass-split text-primary" aria-hidden="true"></i><span>Checking outcome model</span><span class="status-badge ms-auto" data-model-status-badge>Checking</span></div><p class="model-status-detail" data-model-status-detail>Reading model status…</p></div><div class="disclaimer mt-3"><i class="bi bi-info-circle-fill" aria-hidden="true"></i><span>A missing probability map is shown as unavailable; it is never replaced with an invented percentage.</span></div><hr class="my-4" style="border-color: var(--stump-border); opacity: 1;"><h3 class="h6">What you can review</h3><ul class="text-secondary small ps-3 mb-0"><li>Predicted winner label</li><li>Real classifier probabilities, when published</li><li>Model version and saved input context</li><li>Private history for later comparison</li></ul></div></aside>
+    </div>
+  {% else %}
+    <section class="glass-card auth-gate text-center"><span class="aside-icon mx-auto" aria-hidden="true"><i class="bi bi-person-lock"></i></span><h2>Sign in to generate an outcome forecast</h2><p class="text-secondary">Your saved predictions are private and available from any device.</p><a class="btn btn-primary" href="{% url 'login' %}?next={{ request.path|urlencode }}">Sign in to continue</a><p class="mb-0 mt-3">No account? <a href="{% url 'register' %}">Create one</a></p></section>
+  {% endif %}
+  {% endwith %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/prediction.js' %}?v=20260930-1" defer></script>{% endblock %}

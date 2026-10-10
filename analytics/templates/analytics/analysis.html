@@ -1,0 +1,88 @@
+{% extends "analytics/analytics.html" %}
+{% block title %}{{ title }} — Stump AI{% endblock %}
+{% block meta_description %}Compare real team, player, and venue performance with advanced cricket filters.{% endblock %}
+{% block body_class %}analytics-page{% endblock %}
+{% block content %}
+<section class="page-hero compact-hero">
+  <div class="container-xl">
+    <div class="row g-4 align-items-end">
+      <div class="col-lg-8"><span class="section-kicker reveal">Advanced workspace</span><h1 class="page-title reveal">{{ title }}</h1><p class="page-lead reveal mb-0">{{ description }}</p></div>
+      {% if has_analysis %}<div class="col-lg-4 text-lg-end"><a class="btn btn-ghost" href="{{ api_url }}"><i class="bi bi-braces me-2" aria-hidden="true"></i>Reusable JSON API</a></div>{% endif %}
+    </div>
+  </div>
+</section>
+<section class="section-space pt-0">
+  <div class="container-xl">
+    <div class="analytics-layout">
+      <aside class="analytics-sidebar">
+        <form method="get" class="glass-card content-card">
+          <h2>Select a matchup</h2>
+          {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>{% endif %}
+          {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              <select class="form-select{% if field.errors %} is-invalid{% endif %}" name="{{ field.html_name }}" id="{{ field.id_for_label }}">{% for value,label in field.field.choices %}<option value="{{ value }}"{% if field.value|stringformat:'s' == value|stringformat:'s' %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+              {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+          {% endfor %}
+          <button class="btn btn-primary w-100" type="submit">Run analysis</button>
+        </form>
+        <nav class="analysis-nav" aria-label="Analysis types">
+          <a href="{% url 'analytics-dashboard' %}"><i class="bi bi-grid" aria-hidden="true"></i>Overview</a>
+          <a href="{% url 'analytics-team-comparison' %}"><i class="bi bi-people" aria-hidden="true"></i>Compare teams</a>
+          <a href="{% url 'analytics-player-comparison' %}"><i class="bi bi-person" aria-hidden="true"></i>Compare players</a>
+          <a href="{% url 'analytics-venue-analysis' %}"><i class="bi bi-geo-alt" aria-hidden="true"></i>Analyze a venue</a>
+          <a href="{% url 'analytics-player-trend' %}"><i class="bi bi-graph-up" aria-hidden="true"></i>Track player form</a>
+          <a href="{% url 'analytics-head-to-head' %}"><i class="bi bi-shield" aria-hidden="true"></i>Head to head</a>
+        </nav>
+      </aside>
+      <div id="analysis-root">
+        {% if has_analysis %}
+          {{ analysis|json_script:"analysis-data" }}
+          <div class="analytics-summary-grid" id="summary-cards"></div>
+          <article class="glass-card content-card" id="detail-panel"></article>
+          <details class="glass-card content-card mt-4"><summary class="fw-semibold">Complete JSON result</summary><pre class="raw-json mt-3" id="raw-analysis"></pre></details>
+        {% else %}
+          <div class="glass-card empty-state analysis-state"><span class="empty-icon"><i class="bi bi-sliders" aria-hidden="true"></i></span><h2>Choose the filters and run the analysis</h2><p>Real matchup, venue, and trend values will appear here. Empty selections return explicit zeroes and empty tables.</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const node = document.getElementById('analysis-data');
+  if (!node) return;
+  const data = JSON.parse(node.textContent);
+  const cards = document.getElementById('summary-cards');
+  const detail = document.getElementById('detail-panel');
+  document.getElementById('raw-analysis').textContent = JSON.stringify(data, null, 2);
+  const fmt = value => Number(value || 0).toLocaleString();
+  const escapeHTML = value => String(value ?? '—').replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
+  const card = (label, value) => { const item = document.createElement('article'); item.className = 'glass-card kpi-card'; const body = document.createElement('div'); const heading = document.createElement('p'); heading.textContent = label; const strong = document.createElement('strong'); strong.textContent = fmt(value); const note = document.createElement('span'); note.textContent = 'Filtered result'; body.append(heading, strong, note); item.append(body); cards.append(item); };
+  const table = (headers, rows) => { if (!rows.length) return '<div class="empty-state"><h3>No records for this selection</h3><p>Clear a filter or import more records to populate this view.</p></div>'; const head = headers.map(value => `<th>${escapeHTML(value)}</th>`).join(''); const body = rows.map(row => `<tr>${row.map(value => `<td>${escapeHTML(value)}</td>`).join('')}</tr>`).join(''); return `<div class="table-responsive"><table class="table align-middle"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`; };
+
+  if (data.player_a && data.player_b) {
+    card(`${data.player_a.name} runs`, data.player_a.runs); card(`${data.player_b.name} runs`, data.player_b.runs);
+    card(`${data.player_a.name} wickets`, data.player_a.wickets); card(`${data.player_b.name} wickets`, data.player_b.wickets);
+    card('A strike rate', data.player_a.strike_rate); card('B strike rate', data.player_b.strike_rate);
+    card('A economy', data.player_a.economy); card('B economy', data.player_b.economy);
+    detail.innerHTML = `<span class="section-kicker">Player matchup</span><h2 class="h4 mt-2 mb-4">${escapeHTML(data.player_a.name)} vs ${escapeHTML(data.player_b.name)}</h2>${table(['Metric','Player A','Player B'], [['Appearances',data.player_a.appearances,data.player_b.appearances],['Runs',data.player_a.runs,data.player_b.runs],['Average',data.player_a.average,data.player_b.average],['Strike rate',data.player_a.strike_rate,data.player_b.strike_rate],['Wickets',data.player_a.wickets,data.player_b.wickets],['Bowling average',data.player_a.bowling_average,data.player_b.bowling_average],['Economy',data.player_a.economy,data.player_b.economy],['Highest score',data.player_a.highest_score,data.player_b.highest_score]])}`;
+  } else if (data.team_a && data.team_b) {
+    card('Meetings', data.summary.meetings); card(`${data.team_a.name} wins`, data.summary.team_a_wins); card(`${data.team_b.name} wins`, data.summary.team_b_wins); card('No results', data.summary.no_results);
+    const meetings = data.matches?.length ? `<h3 class="h5 mt-4 mb-3">Meetings</h3>${table(['Date','Match','Winner','Margin'],data.matches.map(match => [match.date,`${match.team1} vs ${match.team2}`,match.winner || 'No result',match.win_by_runs ? `+${match.win_by_runs} runs` : match.win_by_wickets ? `+${match.win_by_wickets} wickets` : '—']))}` : '';
+    detail.innerHTML = `<span class="section-kicker">Head to head</span><h2 class="h4 mt-2 mb-4">${escapeHTML(data.team_a.name)} vs ${escapeHTML(data.team_b.name)}</h2>${table(['Metric',data.team_a.name,data.team_b.name],[['Played',data.team_a.played,data.team_b.played],['Wins',data.team_a.wins,data.team_b.wins],['Losses',data.team_a.losses,data.team_b.losses],['Win %',data.team_a.win_percentage,data.team_b.win_percentage],['Runs',data.team_a.runs,data.team_b.runs],['Average score',data.team_a.average_score,data.team_b.average_score],['Wickets',data.team_a.wickets,data.team_b.wickets],['Toss wins',data.team_a.toss_wins,data.team_b.toss_wins],['Avg run margin',data.team_a.average_run_margin,data.team_b.average_run_margin]])} ${meetings}`;
+  } else if (data.points) {
+    const latest = data.points[data.points.length - 1];
+    card('Seasons', data.points.length); card('Runs', data.points.reduce((sum,point) => sum + point.runs, 0)); card('Wickets', data.points.reduce((sum,point) => sum + point.wickets, 0)); card('Latest season', latest?.season || '—');
+    detail.innerHTML = `<span class="section-kicker">Season progression</span><h2 class="h4 mt-2 mb-4">${escapeHTML(data.player.name)} trend</h2>${table(['Season','Runs','Average','Strike rate','4s','6s','Wickets','Economy'],data.points.map(point => [point.season,point.runs,point.average,point.strike_rate,point.fours,point.sixes,point.wickets,point.economy]))}`;
+  } else if (data.summary) {
+    Object.entries(data.summary).slice(0,8).forEach(([key,value]) => card(key.replaceAll('_',' '),value));
+    const rows = data.metrics || data.seasons || data.venues || [];
+    detail.innerHTML = `<span class="section-kicker">Detailed results</span><h2 class="h4 mt-2 mb-4">Venue analysis</h2>${table(['Name / season','Matches','Runs / average','Wickets'],rows.map(row => [row.venue || row.season || row.name,row.matches,row.total_runs ?? row.average_first_innings_score ?? row.runs,row.wickets]))}`;
+  }
+})();
+</script>
+{% endblock %}
