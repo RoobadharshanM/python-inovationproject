@@ -11,6 +11,8 @@ pipeline {
     }
 
     environment {
+        PATH+DOCKER = '/usr/local/bin:/opt/homebrew/bin:/Applications/Docker.app/Contents/Resources/bin'
+        
         IMAGE_NAME      = 'stump-ai'
         IMAGE_TAG       = ''
         IMAGE_FULL      = ''
